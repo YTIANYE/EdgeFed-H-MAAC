@@ -14,31 +14,32 @@ import json
 
 print("TensorFlow version: ", tf.__version__)
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-plt.rcParams['figure.figsize'] = (9, 9)
+print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))     # 获得当前主机上特定运算设备的列表
+plt.rcParams['figure.figsize'] = (9, 9)     # 设置figure_size尺寸
 # logdir="logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
 # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
 map_size = 200
 agent_num = 4
 sensor_num = 30
-obs_r = 60
-collect_r = 40
-speed = 6
-max_size = 5
-sensor_lam = 1e3
+obs_r = 60          # 观察半径
+collect_r = 40      # 收集覆盖半径
+speed = 6           # 移动半径
+max_size = 5        # 收集数据和执行数据的最大缓冲区大小
+sensor_lam = 1e3    #
 
 
 MAX_EPOCH = 5000
+# MAX_EPOCH = 50
 MAX_EP_STEPS = 200
 LR_A = 0.001    # learning rate for actor
 LR_C = 0.002   # learning rate for critic
 GAMMA = 0.85     # reward discount
-TAU = 0.8      # soft replacement
+TAU = 0.8      # soft replacement  目标更新权重。
 BATCH_SIZE = 128
-alpha = 0.9
-beta = 0.1
-Epsilon = 0.2
+alpha = 0.9     #
+beta = 0.1      #
+Epsilon = 0.2   # Probability of random exploration.
 # random seeds are fixed to reproduce the results
 map_seed = 1
 rand_seed = 17

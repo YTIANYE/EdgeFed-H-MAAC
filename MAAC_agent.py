@@ -689,7 +689,7 @@ class MAACAgent(object):
             # tensorboard
             with summary_writer.as_default():
                 if len(self.center_memory) > self.batch_size:
-                    tf.summary.scalar('Loss/center_actor_loss', self.summaries['center-actor_loss'], step=epoch)
+                    tf.summary.scalar('Loss/center_actor_loss', self.summaries['center-actor_loss'], step=epoch)        # 用来显示标量信息
                     tf.summary.scalar('Loss/center_critic_loss', self.summaries['center-critic_loss'], step=epoch)
                     tf.summary.scalar('Loss/agent_actor_loss', self.summaries['agent0-actor_loss'], step=epoch)
                     tf.summary.scalar('Loss/agent_critic_loss', self.summaries['agent0-critic_loss'], step=epoch)
@@ -729,7 +729,11 @@ class MAACAgent(object):
         # gif
         self.env.render(env_log_dir, epoch, True)
         img_paths = glob.glob(env_log_dir + '/*.png')
-        img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
+        # linux和windows文件路径斜杠不同，注意区分
+        # linux 上运行
+        img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
+        # 源代码 Windows上运行
+        # img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
 
         gif_images = []
         for path in img_paths:

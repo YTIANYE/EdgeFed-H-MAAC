@@ -410,9 +410,13 @@ class ACAgent(object):
         # with open(record_dir + '/record.json', 'w') as f:
         #     json.dump(summary_record, f)
 
-        # gif
+        """gif"""
         self.env.render(env_log_dir, epoch, True)
         img_paths = glob.glob(env_log_dir + '/*.png')
+        # linux和windows文件路径斜杠不同，注意区分
+        # linux 上运行
+        # img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
+        # 源代码 Windows上运行
         img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
 
         gif_images = []
