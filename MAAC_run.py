@@ -10,7 +10,11 @@ import datetime
 import MAAC_agent
 from matplotlib import pyplot as plt
 import json
+import time
 
+# 记录开始时间
+startTime = time.time()
+print("开始时间:", time.localtime(startTime))
 
 print("TensorFlow version: ", tf.__version__)
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -29,8 +33,8 @@ max_size = 5        # 收集数据和执行数据的最大缓冲区大小
 sensor_lam = 1e3    #
 
 
-MAX_EPOCH = 5000
-# MAX_EPOCH = 50
+# MAX_EPOCH = 5000
+MAX_EPOCH = 50
 MAX_EP_STEPS = 200
 LR_A = 0.001    # learning rate for actor
 LR_C = 0.002   # learning rate for critic
@@ -89,3 +93,10 @@ f = open('logs/hyperparam/%s.json' % m_time, 'w')
 json.dump(params, f)
 f.close()
 MAAC.train(MAX_EPOCH, MAX_EP_STEPS, up_freq=up_freq, render=True, render_freq=render_freq, FL=FL, FL_omega=FL_omega)
+
+# 统计执行时间
+print("开始时间:", time.localtime(startTime))
+endTime = time.time()
+print("结束时间:", time.localtime(endTime))
+t = endTime - startTime
+print("运行时间：", t)

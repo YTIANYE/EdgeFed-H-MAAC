@@ -731,9 +731,9 @@ class MAACAgent(object):
         img_paths = glob.glob(env_log_dir + '/*.png')
         # linux和windows文件路径斜杠不同，注意区分
         # linux 上运行
-        img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
+        # img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
         # 源代码 Windows上运行
-        # img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
+        img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
 
         gif_images = []
         for path in img_paths:
