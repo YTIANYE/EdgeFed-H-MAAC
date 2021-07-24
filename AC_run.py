@@ -35,7 +35,8 @@ sensor_lam = 1e3
 
 # MAX_EPOCH = 5000
 MAX_EPOCH = 50
-MAX_EP_STEPS = 200
+# MAX_EP_STEPS = 200
+MAX_EP_STEPS = 20
 LR_A = 0.001    # learning rate for actor
 LR_C = 0.002   # learning rate for critic
 GAMMA = 0.85     # reward discount
