@@ -1,5 +1,5 @@
 import tensorflow as tf
-from keras.losses import huber_loss
+# from keras.losses import huber_loss
 from tensorflow import keras
 from tensorflow.keras import layers
 import numpy as np
@@ -13,6 +13,7 @@ import imageio
 import glob
 import tqdm
 import json
+import platform
 
 # tf.random.set_seed(11)
 
@@ -813,11 +814,12 @@ class MAACAgent(object):
         # 画出环境map gif
         self.env.render(env_log_dir, epoch, True)
         img_paths = glob.glob(env_log_dir + '/*.png')
-        # linux和windows文件路径斜杠不同，注意区分
-        # linux 上运行
-        # img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
-        # 源代码 Windows上运行
-        img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
+        # linux(/)和windows(\)文件路径斜杠不同，注意区分
+        system = platform.system()  # 获取操作系统类型
+        if system == 'Windows':
+            img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
+        elif system == 'Linux':
+            img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
 
         gif_images = []
         for path in img_paths:
