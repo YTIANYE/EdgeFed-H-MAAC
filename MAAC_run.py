@@ -34,10 +34,10 @@ speed = 6  # 移动半径
 max_size = 5  # 收集数据和执行数据的最大缓冲区大小
 sensor_lam = 1e3  #
 
-# MAX_EPOCH = 5000
-MAX_EPOCH = 500
-# MAX_EP_STEPS = 200
-MAX_EP_STEPS = 20
+MAX_EPOCH = 5000
+# MAX_EPOCH = 500
+MAX_EP_STEPS = 200
+# MAX_EP_STEPS = 20
 LR_A = 0.001  # learning rate for actor
 LR_C = 0.002  # learning rate for critic
 GAMMA = 0.85  # reward discount
