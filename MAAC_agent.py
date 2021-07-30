@@ -524,7 +524,7 @@ class MAACAgent(object):
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
 
-        return new_rewards[-1]  # TODO 如果四个agent不是联合的reward， 为什么只返回最后一个？
+        return new_rewards[-1]  # 四个reward的值都是一样的，所以返回其中之一即可
 
     """经验重放过程"""
 
@@ -712,7 +712,7 @@ class MAACAgent(object):
                 # self.env.world.finished_data = []
                 episode += 1
                 # self.env.reset()
-                for m in self.agent_memory.keys():
+                for m in self.agent_memory.keys():      # AC 中没有
                     del self.agent_memory[m][0:-self.batch_size * 2]  # self.batch_size = 128
                 del self.center_memory[0:-self.batch_size * 2]
                 print(
@@ -732,7 +732,7 @@ class MAACAgent(object):
             cur_reward = self.actor_act(epoch)  # 获取当前reward
             # print('episode-%s reward:%f' % (episode, cur_reward))
             self.replay()  # 经验重放
-            finish_length.append(len(self.env.world.finished_data))  # 完成 数
+            finish_length.append(len(self.env.world.finished_data))  # 完成 数     #TODO 等待更改
             finish_size.append(sum([data[0] for data in self.env.world.finished_data]))  # 完成 量
             sensor_ages.append(list(self.env.world.sensor_age.values()))
             # agent_pos.append([[agent.position[0], agent.position[1]] for agent in self.env.world.agents])

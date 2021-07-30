@@ -109,7 +109,8 @@ class MEC_MARL_ENV(gym.Env):
         for agent in self.agents:
             obs.append(self.get_obs(agent))  # 观察范围
             done.append(self._get_done(agent))  # 完成反馈
-            reward.append(self._get_age())  # to do # 年龄
+            # reward.append(self._get_age())  # 每个agent reward相同，都是平均年龄
+            reward.append(self._get_reward())
             info['n'].append(self._get_info(agent))
         self.state = obs
         # reward
@@ -117,6 +118,7 @@ class MEC_MARL_ENV(gym.Env):
         logging.info("get reward")
         if self.aggregate_reward:  # 源代码这句话不执行，即每个agent不共用相同的reward
             reward = [reward_sum] * self.agent_num
+            # reward = [reward_sum / self.agent_num] * self.agent_num
         return self.state, reward, done, info
 
     def reset(self):
@@ -249,27 +251,29 @@ class MEC_MARL_ENV(gym.Env):
     """数据源平均年龄 average age"""
 
     def _get_age(self):
-        return np.mean(list(self.world.sensor_age.values()))
+        return np.mean(list(self.world.sensor_age.values()))        # 这里返回的是所有数据源的平均年龄，导致每个agent的reward相同
 
     """get reward for a particular agent"""
 
     def _get_reward(self):
-        return np.mean(list(self.world.sensor_age.values()))
-        # state_reward = sum(sum(self.DS_state)) / self.sensor_num
+        # return np.mean(list(self.world.sensor_age.values()))
+        state_reward = sum(sum(self.DS_state)) / self.sensor_num
         # done_reward = [[i[0], i[1]] for i in self.world.finished_data]
-        # if not done_reward:
-        #     done_reward = np.array([0, 0])
-        # else:
-        #     # print(np.array(done_reward))
-        #     done_reward = np.average(np.array(done_reward), axis=0)
-        # buffer_reward = 0
-        # for agent in self.agents:
-        #     if agent.done_data:
-        #         buffer_reward += np.mean([d[1] for d in agent.done_data])
-        # buffer_reward = buffer_reward / self.agent_num
-        # # print(buffer_reward)
-        # # print([state_reward, done_reward])
-        # return self.alpha * done_reward[1] + self.beta * (state_reward[1] + self.sensor_num - self.map_size * self.map_size) + (1 - self.alpha - self.beta) * buffer_reward
+        finished_data = [[i[0], i[1]] for i in self.world.finished_data]        # 卸载到云端的全部数据信息 List[数据大小，数据年龄]
+        data_nums = len(finished_data)      # 完成任务的个数
+        if not finished_data:
+            done_reward = np.array([0, 0])
+        else:
+            # print(np.array(done_reward))
+            done_reward = np.average(np.array(finished_data), axis=0)     # 云端数据[大小平均值，年龄平均值]
+        buffer_reward = 0
+        for agent in self.agents:
+            if agent.done_data:
+                buffer_reward += np.mean([d[1] for d in agent.done_data])
+        buffer_reward = buffer_reward / self.agent_num      # 卸载缓冲区中数据年龄的平均值
+        # print(buffer_reward)
+        # print([state_reward, done_reward])
+        return self.alpha * done_reward[1] + self.beta * (state_reward[1] + self.sensor_num - self.map_size * self.map_size) + (1 - self.alpha - self.beta) * buffer_reward
 
     """画出环境map： 包括数据源 edge分布情况 """
 

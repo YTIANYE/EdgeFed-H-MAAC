@@ -40,7 +40,7 @@ class EdgeDevice(object):
         self.movable = movable  # 是否可以移动
         self.state = AgentState()
         self.action = Action()
-        self.done_data = []  # 卸载缓冲区，处理完的数据的缓冲区
+        self.done_data = []  # 卸载缓冲区，处理完的数据的缓冲区 List[数据大小、年龄、编号]
         self.offloading_idle = True  # 卸载表示， True需要卸载
         self.total_data = {}  # 每个agent的总数据 [数据大小，年龄，数据源索引]
         self.computing_rate = 2e4  # edge端 数据处理速率 16
@@ -378,7 +378,7 @@ class MEC_world(object):
             if sensor.data_buffer:
                 data_size = sum(i[0] for i in sensor.data_buffer)  # 该数据源总数据大小
                 # update data source state, note that the (x,y) is reversed to the matrix index (i,j)
-                self.DS_state[sensor.position[1], sensor.position[0]] = [  # 最小的维度2存储内容
+                self.DS_state[sensor.position[1], sensor.position[0]] = [  # 最小的维度2 存储内容
                     data_size, sensor.data_buffer[0][1]]  # 数据大小和年龄
 
         # edge process  offloading collect

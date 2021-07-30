@@ -45,13 +45,16 @@ TAU = 0.8  # soft replacement  目标更新权重
 BATCH_SIZE = 128
 alpha = 0.9  #
 beta = 0.1  #
+aggregate_reward = False        # edge 是否共用sum_reward， 源码默认False
+# aggregate_reward = True
 Epsilon = 0.2  # Probability of random exploration
 # random seeds are fixed to reproduce the results
 map_seed = 1
 rand_seed = 17
 up_freq = 8  # 目标网络更新频率 每up_freq个epoch更新一次
 render_freq = 32
-FL = True  # 控制是否联合学习的开关
+FL = True  # 控制是否联合学习的开关，默认True
+# FL = False
 FL_omega = 0.5
 np.random.seed(map_seed)
 random.seed(map_seed)
@@ -76,6 +79,9 @@ params = {
     'BATCH_SIZE': BATCH_SIZE,
     # 'alpha': alpha,
     # 'beta': beta,
+    'alpha': alpha,
+    'beta': beta,
+    'aggregate_reward': aggregate_reward,
     'Epsilon': Epsilon,  # Probability of random exploration.
     'learning_seed': rand_seed,
     'env_seed': map_seed,
@@ -86,7 +92,8 @@ params = {
 }
 
 mec_world = mec_def.MEC_world(map_size, agent_num, sensor_num, obs_r, speed, collect_r, max_size, sensor_lam)
-env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta)
+# env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta)
+env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta, aggregate_reward=aggregate_reward)
 # 建立模型
 MAAC = MAAC_agent.MAACAgent(env, TAU, GAMMA, LR_A, LR_C, LR_A, LR_C, BATCH_SIZE, Epsilon)
 # 记录环境参数
