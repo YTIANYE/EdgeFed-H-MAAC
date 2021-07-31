@@ -26,8 +26,10 @@ plt.rcParams['figure.figsize'] = (9, 9)  # 设置figure_size尺寸
 # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
 map_size = 200
-agent_num = 4
-sensor_num = 30
+# agent_num = 4
+# sensor_num = 30
+agent_num = 10
+sensor_num = 80
 obs_r = 60  # 观察半径
 collect_r = 40  # 收集覆盖半径
 speed = 6  # 移动半径
