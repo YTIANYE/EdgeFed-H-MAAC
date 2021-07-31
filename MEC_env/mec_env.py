@@ -278,10 +278,7 @@ class MEC_MARL_ENV(gym.Env):
         # return self.alpha * done_reward[1] + self.beta * (state_reward[1] + self.sensor_num - self.map_size * self.map_size) + (1 - self.alpha - self.beta) * buffer_reward
 
         # # 方式三
-        state_reward = sum(sum(self.DS_state)) / self.sensor_num
-        # done_reward = [[i[0], i[1]] for i in self.world.finished_data]
-        finished_data = [[i[0], i[1]] for i in self.world.finished_data]        # 卸载到云端的全部数据信息 List[数据大小，数据年龄]
-        data_nums = len(finished_data)      # 完成任务的个数
+        data_nums = len(self.world.finished_data)      # 完成任务的个数
         return data_nums
 
     """画出环境map： 包括数据源 edge分布情况 """
