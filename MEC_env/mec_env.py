@@ -256,24 +256,33 @@ class MEC_MARL_ENV(gym.Env):
     """get reward for a particular agent"""
 
     def _get_reward(self):
+        # # 方式一： 平均年龄
         # return np.mean(list(self.world.sensor_age.values()))
+
+        # # 方式二： 源代码注释部分
+        # state_reward = sum(sum(self.DS_state)) / self.sensor_num
+        # # done_reward = [[i[0], i[1]] for i in self.world.finished_data]
+        # finished_data = [[i[0], i[1]] for i in self.world.finished_data]        # 卸载到云端的全部数据信息 List[数据大小，数据年龄]
+        # if not finished_data:
+        #     done_reward = np.array([0, 0])
+        # else:
+        #     # print(np.array(done_reward))
+        #     done_reward = np.average(np.array(finished_data), axis=0)     # 云端数据[大小平均值，年龄平均值]
+        # buffer_reward = 0
+        # for agent in self.agents:
+        #     if agent.done_data:
+        #         buffer_reward += np.mean([d[1] for d in agent.done_data])
+        # buffer_reward = buffer_reward / self.agent_num      # 卸载缓冲区中数据年龄的平均值
+        # # print(buffer_reward)
+        # # print([state_reward, done_reward])
+        # return self.alpha * done_reward[1] + self.beta * (state_reward[1] + self.sensor_num - self.map_size * self.map_size) + (1 - self.alpha - self.beta) * buffer_reward
+
+        # # 方式三
         state_reward = sum(sum(self.DS_state)) / self.sensor_num
         # done_reward = [[i[0], i[1]] for i in self.world.finished_data]
         finished_data = [[i[0], i[1]] for i in self.world.finished_data]        # 卸载到云端的全部数据信息 List[数据大小，数据年龄]
         data_nums = len(finished_data)      # 完成任务的个数
-        if not finished_data:
-            done_reward = np.array([0, 0])
-        else:
-            # print(np.array(done_reward))
-            done_reward = np.average(np.array(finished_data), axis=0)     # 云端数据[大小平均值，年龄平均值]
-        buffer_reward = 0
-        for agent in self.agents:
-            if agent.done_data:
-                buffer_reward += np.mean([d[1] for d in agent.done_data])
-        buffer_reward = buffer_reward / self.agent_num      # 卸载缓冲区中数据年龄的平均值
-        # print(buffer_reward)
-        # print([state_reward, done_reward])
-        return self.alpha * done_reward[1] + self.beta * (state_reward[1] + self.sensor_num - self.map_size * self.map_size) + (1 - self.alpha - self.beta) * buffer_reward
+        return data_nums
 
     """画出环境map： 包括数据源 edge分布情况 """
 

@@ -782,7 +782,8 @@ class MAACAgent(object):
                                           self.summaries['agent%s-actor_loss' % acount], step=epoch)
                         tf.summary.scalar('Stats/agent%s_critic_loss' % acount,
                                           self.summaries['agent%s-critic_loss' % acount], step=epoch)
-                tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
+                # tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
+                tf.summary.scalar('Main/step_reward', cur_reward, step=epoch)
 
             summary_writer.flush()
 
