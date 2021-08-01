@@ -24,8 +24,10 @@ plt.rcParams['figure.figsize'] = (9, 9)
 # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
 map_size = 200
-agent_num = 4
-sensor_num = 30
+# agent_num = 4
+# sensor_num = 30
+agent_num = 8
+sensor_num = 60
 obs_r = 60
 collect_r = 40
 speed = 6

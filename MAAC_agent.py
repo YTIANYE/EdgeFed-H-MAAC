@@ -485,14 +485,14 @@ class MAACAgent(object):
             new_done_buffer_list = tf.expand_dims(new_done_buffer_list, axis=0)
             new_pos_list = tf.expand_dims(new_pos_list, axis=0)
 
-            # 经验池 record memory
+            """经验池 添加内容 record memory"""
             # edge agent 的经验池
             for i, agent in enumerate(self.agents):
-                state_map = new_state_maps[i]  # 观察范围
+                # state_map = new_state_maps[i]  # 观察范围
                 # print(['agent%s' % i, sum(sum(state_map))])
                 # pos = agent.position
-                total_data_state = agent.get_total_data()
-                done_data_state = agent.get_done_data()  # 获取完成数据 shape = （2， 5）
+                # total_data_state = agent.get_total_data()
+                # done_data_state = agent.get_done_data()  # 获取完成数据 shape = （2， 5）
                 state_map = tf.expand_dims(self.env.get_obs(agent), axis=0)  # 观察范围
                 # pos = tf.expand_dims(agent.position, axis=0)
                 total_data_state = tf.expand_dims(agent.get_total_data(), axis=0)  # 执行缓冲区全部数据 shape = （1， 2， 5）
@@ -531,11 +531,11 @@ class MAACAgent(object):
 
         return new_rewards[-1]  # 四个reward的值都是一样的，所以返回其中之一即可
 
-    """经验重放过程"""
+    """经验重放过程,修改网络参数"""
 
     # @tf.function(experimental_relax_shapes=True)
     def replay(self):
-        # agent 经验回放    agent replay
+        """agent 经验回放    agent replay"""
         for no, agent_memory in self.agent_memory.items():
             if len(agent_memory) < self.batch_size:
                 continue
@@ -548,7 +548,7 @@ class MAACAgent(object):
             # t_agent_critic = self.target_agent_critics[no]
             # agent_actor = self.agent_actors[no]
             # agent_critic = self.agent_critics[no]
-            # 获取sample中的信息
+            """获取sample中的信息"""
             # state
             state_map = np.vstack([sample[0][0] for sample in samples])
             # pos = np.vstack([sample[0][1] for sample in samples])
@@ -569,7 +569,7 @@ class MAACAgent(object):
             # # done
             # done = [sample[4] for sample in samples]
 
-            # 下一步的action 和 reward   next actions & rewards
+            """下一步的action 和 reward   next actions & rewards"""
             new_actions = self.target_agent_actors[no].predict(
                 [new_state_map, new_total_data_state, new_done_data_state, new_band])
             # new_move = np.array([self.move_dict[np.argmax(single_sample)] for single_sample in new_actions[0]])
@@ -579,7 +579,7 @@ class MAACAgent(object):
             # print('qfuture{}'.format(q_future))
             target_qs = a_reward + q_future * self.gamma
 
-            # 训练策略网络 train critic
+            """训练策略网络 train critic"""
             with tf.GradientTape() as tape:  # 根据某个函数的输入变量来计算它的导数,Tensorflow 会把 ‘tf.GradientTape’ 上下文中执行的所有操作都记录在一个磁带上 (“tape”)。 然后基于这个磁带和每次操作产生的导数，用反向微分法（“reverse mode differentiation”）来计算这些被“记录在案”的函数的导数。
                 # tape.watch(self.agent_critics[no].trainable_variables)
                 q_values = self.agent_critics[no](
@@ -594,7 +594,7 @@ class MAACAgent(object):
             self.agent_critic_opt[no].apply_gradients(
                 zip(ac_grad, self.agent_critics[no].trainable_variables))  # zip()的目的是映射多个容器的相似索引，以便可以将它们用作单个实体使用
 
-            # 训练动作网络 train actor
+            """训练动作网络 train actor"""
             with tf.GradientTape() as tape:
                 tape.watch(self.agent_actors[no].trainable_variables)  # 确保某个tensor被tape追踪
                 actions = self.agent_actors[no]([state_map, total_data_state, done_data_state, band])
@@ -612,45 +612,46 @@ class MAACAgent(object):
             self.summaries['agent%s-critic_loss' % no] = ac_loss
             self.summaries['agent%s-actor_loss' % no] = aa_loss
 
-        # 中心经验回放    agent replay
+        """中心经验回放    agent replay"""
         if len(self.center_memory) < self.batch_size:
             return
-        # todo 这里截取的有问题，应该是center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
-        center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-            self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
-        done_buffer_list = np.vstack([sample[0][0] for sample in center_samples])
-        pos_list = np.vstack([sample[0][1] for sample in center_samples])
-        bandvec_act = np.vstack([sample[1] for sample in center_samples])
-        c_reward = tf.expand_dims([sample[2] for sample in center_samples], axis=-1)
-        # new states
-        new_done_buffer_list = np.vstack([sample[3][0] for sample in center_samples])
-        new_pos_list = np.vstack([sample[3][1] for sample in center_samples])
-        # next actions & reward
-        new_c_actions = self.target_center_actor.predict([new_done_buffer_list, new_pos_list])
-        cq_future = self.target_center_critic.predict([new_done_buffer_list, new_pos_list, new_c_actions])
-        c_target_qs = c_reward + cq_future * self.gamma
-        self.summaries['cq_val'] = np.average(c_reward[0])
+        else:
+            # todo 这里截取的有问题，应该是center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
+            center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+                self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
+            done_buffer_list = np.vstack([sample[0][0] for sample in center_samples])
+            pos_list = np.vstack([sample[0][1] for sample in center_samples])
+            bandvec_act = np.vstack([sample[1] for sample in center_samples])
+            c_reward = tf.expand_dims([sample[2] for sample in center_samples], axis=-1)
+            # new states
+            new_done_buffer_list = np.vstack([sample[3][0] for sample in center_samples])
+            new_pos_list = np.vstack([sample[3][1] for sample in center_samples])
+            # next actions & reward
+            new_c_actions = self.target_center_actor.predict([new_done_buffer_list, new_pos_list])
+            cq_future = self.target_center_critic.predict([new_done_buffer_list, new_pos_list, new_c_actions])
+            c_target_qs = c_reward + cq_future * self.gamma     # 目标reward，目标q值
+            self.summaries['cq_val'] = np.average(c_reward[0])
 
-        # 训练中心策略网络 train center critic
-        with tf.GradientTape() as tape:
-            tape.watch(self.center_critic.trainable_variables)
-            cq_values = self.center_critic([done_buffer_list, pos_list, bandvec_act])
-            cc_loss = tf.reduce_mean(tf.math.square(cq_values - tf.cast(c_target_qs, dtype=tf.float32)))
-            # cc_loss = tf.reduce_mean(tf.math.square(cq_values - c_target_qs))
-        cc_grad = tape.gradient(cc_loss, self.center_critic.trainable_variables)
-        self.center_critic_opt.apply_gradients(zip(cc_grad, self.center_critic.trainable_variables))
-        # 训练中心动作网络 train center actor
-        with tf.GradientTape() as tape:
-            tape.watch(self.center_actor.trainable_variables)
-            c_act = self.center_actor([done_buffer_list, pos_list])
-            ca_loss = tf.reduce_mean(self.center_critic([done_buffer_list, pos_list, c_act]))
-        # print(self.center_critic([sensor_maps, agent_maps, c_act]))
-        ca_grad = tape.gradient(ca_loss, self.center_actor.trainable_variables)
-        # print(ca_grad)
-        self.center_actor_opt.apply_gradients(zip(ca_grad, self.center_actor.trainable_variables))
-        # print(ca_loss)
-        self.summaries['center-critic_loss'] = cc_loss
-        self.summaries['center-actor_loss'] = ca_loss
+            # 训练 center_critic 网络 train center critic
+            with tf.GradientTape() as tape:
+                tape.watch(self.center_critic.trainable_variables)
+                cq_values = self.center_critic([done_buffer_list, pos_list, bandvec_act])
+                cc_loss = tf.reduce_mean(tf.math.square(cq_values - tf.cast(c_target_qs, dtype=tf.float32)))
+                # cc_loss = tf.reduce_mean(tf.math.square(cq_values - c_target_qs))
+            cc_grad = tape.gradient(cc_loss, self.center_critic.trainable_variables)
+            self.center_critic_opt.apply_gradients(zip(cc_grad, self.center_critic.trainable_variables))
+            # 训练 center_actor 网络 train center actor
+            with tf.GradientTape() as tape:
+                tape.watch(self.center_actor.trainable_variables)
+                c_act = self.center_actor([done_buffer_list, pos_list])
+                ca_loss = tf.reduce_mean(self.center_critic([done_buffer_list, pos_list, c_act]))
+            # print(self.center_critic([sensor_maps, agent_maps, c_act]))
+            ca_grad = tape.gradient(ca_loss, self.center_actor.trainable_variables)
+            # print(ca_grad)
+            self.center_actor_opt.apply_gradients(zip(ca_grad, self.center_actor.trainable_variables))
+            # print(ca_loss)
+            self.summaries['center-critic_loss'] = cc_loss
+            self.summaries['center-actor_loss'] = ca_loss
 
     # TODO:运行报错
     #  WARNING:tensorflow:Compiled the loaded model, but the compiled metrics have yet to be built. 已编译加载的模型，但尚未构建已编译的度量。
@@ -717,7 +718,7 @@ class MAACAgent(object):
                 # self.env.world.finished_data = []
                 episode += 1
                 # self.env.reset()
-                for m in self.agent_memory.keys():      # AC 中没有
+                for m in self.agent_memory.keys():  # AC 中没有
                     del self.agent_memory[m][0:-self.batch_size * 2]  # self.batch_size = 128
                 del self.center_memory[0:-self.batch_size * 2]
                 print(
@@ -726,7 +727,7 @@ class MAACAgent(object):
 
                 with summary_writer.as_default():  # Summary： 所有需要在TensorBoard上展示的统计结果
                     tf.summary.scalar('Main/episode_reward', total_reward, step=episode)  # 添加标量统计结果
-                    tf.summary.scalar('Main/episode_steps', steps, step=episode)
+                    # tf.summary.scalar('Main/episode_steps', steps, step=episode)
                     # tf.summary.trace_export(name="model_trace", step=0, profiler_outdir=train_log_dir)
 
                 summary_writer.flush()
@@ -735,8 +736,8 @@ class MAACAgent(object):
                 total_reward = 0
 
             cur_reward = self.actor_act(epoch)  # 获取当前reward
-            # print('episode-%s reward:%f' % (episode, cur_reward))
-            self.replay()  # 经验重放
+            print('episode-%s reward:%f' % (episode, cur_reward))
+            self.replay()  # 经验重放，更改网络参数
             finish_length.append(len(self.env.world.finished_data))  # 完成 数     #TODO 等待更改
             finish_size.append(sum([data[0] for data in self.env.world.finished_data]))  # 完成 量
             sensor_ages.append(list(self.env.world.sensor_age.values()))
@@ -751,9 +752,9 @@ class MAACAgent(object):
             # exe, done = self.env.get_buffer_state()
             # exebuff.append(exe)
             # donebuff.append(done)
-
             # summary_record.append(self.summaries)
-            # 联合学习参数更新 以及 目标网络权重参数更新 update target
+
+            """联合学习参数更新 以及 目标网络权重参数更新 update target"""
             if epoch % up_freq == 1:
                 print('update targets, finished data: {}'.format(len(self.env.world.finished_data)))
 
@@ -817,7 +818,7 @@ class MAACAgent(object):
         # with open(record_dir + '/record.json', 'w') as f:
         #     json.dump(summary_record, f)
 
-        # 画出环境map gif
+        """画出环境map gif"""
         self.env.render(env_log_dir, epoch, True)
         img_paths = glob.glob(env_log_dir + '/*.png')
         # linux(/)和windows(\)文件路径斜杠不同，注意区分
