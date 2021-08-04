@@ -256,8 +256,8 @@ class ACAgent(object):
 
             new_state_map, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
             # reward 第三种形式需要对new_rewards进行一下处理
-            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
-            new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
+            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
             new_sensor_map, agent_map = self.env.get_statemap()
             new_total_buffer_list, new_done_buffer_list, new_pos_list = get_center_state(self.env)
             new_total_buffer_list = tf.expand_dims(new_total_buffer_list, axis=0)
@@ -284,8 +284,8 @@ class ACAgent(object):
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
             # reward 第三种形式需要对new_rewards进行一下处理
-            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
-            new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
+            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
 
         return new_rewards[-1]
 

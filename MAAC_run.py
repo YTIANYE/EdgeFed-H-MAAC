@@ -49,7 +49,8 @@ alpha = 0.9  #
 beta = 0.1  #
 aggregate_reward = False        # edge 是否共用sum_reward， 源码默认False
 # aggregate_reward = True
-Epsilon = 0.2  # Probability of random exploration
+Epsilon = 0.05  # Probability of random exploration
+# Epsilon = 0.2  # Probability of random exploration
 # random seeds are fixed to reproduce the results
 map_seed = 1
 rand_seed = 17
