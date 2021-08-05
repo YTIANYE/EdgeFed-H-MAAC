@@ -105,7 +105,6 @@ def agent_actor(input_dim_list, cnn_kernel_size, move_r):  # input_dim_list [(12
 
 # inputs: sensor_map, agent_map, bandwidth_vector;
 # outputs: bandwidth_vec
-
 def center_actor(input_dim_list, cnn_kernel_size):
     done_buffer_list = keras.Input(
         shape=input_dim_list[0])  # 缓冲区列表形状 shape = (None, 4, 2, 5)       # 实例化一个keras张量,shape: 形状元组（整型）
@@ -537,14 +536,17 @@ class MAACAgent(object):
 
     # @tf.function(experimental_relax_shapes=True)
     def replay(self):
-        """agent 经验回放    agent replay"""
+        """edge 经验回放    agent replay"""
         for no, agent_memory in self.agent_memory.items():
             if len(agent_memory) < self.batch_size:
                 continue
             # print([len(agent_memory[-100:]), self.batch_size])
+            # 这里sample截取的有问题，应该是agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
+            # samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+            #     agent_memory[-self.batch_size * 2:],
+            #     int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
             samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-                # todo 这里截取的有问题，应该是agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
-                agent_memory[-self.batch_size * 2:],
+                agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
                 int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
             # t_agent_actor = self.target_agent_actors[no]
             # t_agent_critic = self.target_agent_critics[no]
@@ -618,9 +620,12 @@ class MAACAgent(object):
         if len(self.center_memory) < self.batch_size:
             return
         else:
-            # todo 这里截取的有问题，应该是center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
+            # 这里sample截取的有问题，应该是self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
+            # center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+            #     self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
             center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-                self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
+                self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
+                int(self.batch_size * (1 - self.sample_prop)))
             done_buffer_list = np.vstack([sample[0][0] for sample in center_samples])
             pos_list = np.vstack([sample[0][1] for sample in center_samples])
             bandvec_act = np.vstack([sample[1] for sample in center_samples])
@@ -631,7 +636,7 @@ class MAACAgent(object):
             # next actions & reward
             new_c_actions = self.target_center_actor.predict([new_done_buffer_list, new_pos_list])
             cq_future = self.target_center_critic.predict([new_done_buffer_list, new_pos_list, new_c_actions])
-            c_target_qs = c_reward + cq_future * self.gamma     # 目标reward，目标q值
+            c_target_qs = c_reward + cq_future * self.gamma  # 目标reward，目标q值
             self.summaries['cq_val'] = np.average(c_reward[0])
 
             # 训练 center_critic 网络 train center critic
@@ -670,6 +675,7 @@ class MAACAgent(object):
     # @tf.function
     def train(self, max_epochs=2000, max_step=500, up_freq=8, render=False, render_freq=1, FL=False, FL_omega=0.5,
               anomaly_edge=False):
+        """初始化变量"""
         cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
         train_log_dir = 'logs/fit/' + cur_time
         env_log_dir = 'logs/env/env' + cur_time
@@ -705,6 +711,7 @@ class MAACAgent(object):
         #     anomaly_agent = np.random.randint(self.agent_num)
         # summary_record = []
 
+        """训练过程"""
         while epoch < max_epochs:
             print('epoch %s' % epoch)
             # if anomaly_edge and (epoch == anomaly_step):
@@ -715,7 +722,7 @@ class MAACAgent(object):
                 self.env.render(env_log_dir, epoch, True)
                 # sensor_states.append(self.env.DS_state)
 
-            # 经过max_step后， 结束一个episode，更新经验池，重新开始
+            """经过max_step后， 结束一个episode，更新经验池，重新开始"""
             if steps >= max_step:
                 # self.env.world.finished_data = []
                 episode += 1
@@ -737,10 +744,11 @@ class MAACAgent(object):
                 steps = 0
                 total_reward = 0
 
+            """执行action 及 经验重放"""
             cur_reward = self.actor_act(epoch)  # 获取当前reward
             print('episode-%s reward:%f' % (episode, cur_reward))
             self.replay()  # 经验重放，更改网络参数
-            finish_length.append(len(self.env.world.finished_data))  # 完成 数     #TODO 等待更改
+            finish_length.append(len(self.env.world.finished_data))  # 完成 数
             finish_size.append(sum([data[0] for data in self.env.world.finished_data]))  # 完成 量
             sensor_ages.append(list(self.env.world.sensor_age.values()))
             # agent_pos.append([[agent.position[0], agent.position[1]] for agent in self.env.world.agents])
@@ -776,7 +784,7 @@ class MAACAgent(object):
             steps += 1
             epoch += 1
 
-            # tensorboard 喂入需要监听的数据
+            """tensorboard 喂入需要监听的数据"""
             with summary_writer.as_default():
                 if len(self.center_memory) > self.batch_size:
                     tf.summary.scalar('Loss/center_actor_loss', self.summaries['center-actor_loss'],
@@ -795,7 +803,7 @@ class MAACAgent(object):
 
             summary_writer.flush()
 
-        # save final model
+        """save final model"""
         self.save_model(episode, cur_time)
         sio.savemat(record_dir + '/data.mat',
                     {'finish_len': finish_length,

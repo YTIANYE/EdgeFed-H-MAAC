@@ -116,7 +116,7 @@ class MEC_MARL_ENV(gym.Env):
         # reward
         reward_sum = np.sum(reward)
         logging.info("get reward")
-        if self.aggregate_reward:  # 源代码这句话不执行，即每个agent不共用相同的reward
+        if self.aggregate_reward:  # 源代码这句话不执行，即每个agent不共用相同的sum_reward
             reward = [reward_sum] * self.agent_num
             # reward = [reward_sum / self.agent_num] * self.agent_num
         return self.state, reward, done, info
