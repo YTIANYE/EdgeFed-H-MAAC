@@ -478,8 +478,8 @@ class MAACAgent(object):
             # print('new_bandwidth{}'.format(new_bandvec[0]))
             # 经过预测后得到的结果
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
-            # reward 第三种形式需要对new_rewards进行一下处理
-            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # TODO reward 第三种形式需要对new_rewards进行一下处理,修改reward时注意一起修改
+            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
             # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
             new_done_buffer_list, new_pos_list = self.env.get_center_state()
             new_done_buffer_list = tf.expand_dims(new_done_buffer_list, axis=0)
@@ -526,8 +526,8 @@ class MAACAgent(object):
             new_bandvec = np.random.rand(self.agent_num)  # 通过本函数可以返回一个或一组服从“0~1”均匀分布的随机样本值。
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
-            # reward 第三种形式需要对new_rewards进行一下处理
-            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # TODO reward 第三种形式需要对new_rewards进行一下处理，修改reward时注意一起修改
+            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
             # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
 
         return new_rewards[-1]  # 四个reward的值都是一样的，所以返回其中之一即可
