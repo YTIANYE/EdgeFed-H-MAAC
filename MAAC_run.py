@@ -26,10 +26,10 @@ plt.rcParams['figure.figsize'] = (9, 9)  # 设置figure_size尺寸
 # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
 map_size = 200
-# agent_num = 4
-# sensor_num = 30
-agent_num = 8
-sensor_num = 60
+agent_num = 4
+sensor_num = 30
+# agent_num = 8
+# sensor_num = 60
 obs_r = 60  # 观察半径
 collect_r = 40  # 收集覆盖半径
 speed = 6  # 移动半径
@@ -55,8 +55,8 @@ map_seed = 1
 rand_seed = 17
 up_freq = 8  # 目标网络更新频率 每up_freq个epoch更新一次
 render_freq = 32
-FL = True  # 控制是否联合学习的开关，默认True
-# FL = False
+# FL = True  # 控制是否联合学习的开关，默认True
+FL = False
 FL_omega = 0.5      # todo 关于联合学习因子其他情况还没有进行实验
 np.random.seed(map_seed)
 random.seed(map_seed)
