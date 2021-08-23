@@ -26,19 +26,24 @@ plt.rcParams['figure.figsize'] = (9, 9)  # 设置figure_size尺寸
 # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
 map_size = 200
-agent_num = 4
-sensor_num = 30
-# agent_num = 8
-# sensor_num = 60
+# agent_num = 4
+# sensor_num = 30
+agent_num = 8
+sensor_num = 60
+# sensor_num = 20 30 40 50 60 70 80 90 100 110 120
 obs_r = 60  # 观察半径
 collect_r = 40  # 收集覆盖半径
 speed = 6  # 移动半径
 max_size = 5  # 收集数据和执行数据的最大缓冲区大小
 sensor_lam = 1e3  #
 
+# 测试周期：经过大量实验实例观察一般2k个epoch开始趋于稳定，故实验周期设置为3k
+# MAX_EPOCH = 3000
+# 大周期
 MAX_EPOCH = 5000
-# MAX_EPOCH = 500
 MAX_EP_STEPS = 200
+# 小周期
+# MAX_EPOCH = 500
 # MAX_EP_STEPS = 20
 LR_A = 0.001  # learning rate for actor
 LR_C = 0.002  # learning rate for critic
@@ -55,8 +60,8 @@ map_seed = 1
 rand_seed = 17
 up_freq = 8  # 目标网络更新频率 每up_freq个epoch更新一次
 render_freq = 32
-# FL = True  # 控制是否联合学习的开关，默认True
-FL = False
+FL = True  # 控制是否联合学习的开关，默认True
+# FL = False
 FL_omega = 0.5      # todo 关于联合学习因子其他情况还没有进行实验
 np.random.seed(map_seed)
 random.seed(map_seed)

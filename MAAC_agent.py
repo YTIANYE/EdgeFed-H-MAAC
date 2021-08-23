@@ -479,7 +479,7 @@ class MAACAgent(object):
             # 经过预测后得到的结果
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
             # TODO reward 第三种形式需要对new_rewards进行一下处理,修改reward时注意一起修改
-            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
             # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
             new_done_buffer_list, new_pos_list = self.env.get_center_state()
             new_done_buffer_list = tf.expand_dims(new_done_buffer_list, axis=0)
@@ -527,7 +527,7 @@ class MAACAgent(object):
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
             # TODO reward 第三种形式需要对new_rewards进行一下处理，修改reward时注意一起修改
-            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
             # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
 
         return new_rewards[-1]  # 四个reward的值都是一样的，所以返回其中之一即可
@@ -542,9 +542,11 @@ class MAACAgent(object):
                 continue
             # print([len(agent_memory[-100:]), self.batch_size])
             # 这里sample截取的有问题，应该是agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
+            # 方式一：原sample方式
             # samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
             #     agent_memory[-self.batch_size * 2:],
             #     int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
+            # 方式二：改后的sample方式
             samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
                 agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
                 int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
@@ -621,25 +623,28 @@ class MAACAgent(object):
             return
         else:
             # 这里sample截取的有问题，应该是self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
+            # 方式一：原sample方式
             # center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
             #     self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
+            # 方式二：改后的sample方式
             center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
                 self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
                 int(self.batch_size * (1 - self.sample_prop)))
+            """获取sample中的信息"""
             done_buffer_list = np.vstack([sample[0][0] for sample in center_samples])
             pos_list = np.vstack([sample[0][1] for sample in center_samples])
             bandvec_act = np.vstack([sample[1] for sample in center_samples])
             c_reward = tf.expand_dims([sample[2] for sample in center_samples], axis=-1)
-            # new states
+            """new states"""
             new_done_buffer_list = np.vstack([sample[3][0] for sample in center_samples])
             new_pos_list = np.vstack([sample[3][1] for sample in center_samples])
-            # next actions & reward
+            """next actions & reward"""
             new_c_actions = self.target_center_actor.predict([new_done_buffer_list, new_pos_list])
             cq_future = self.target_center_critic.predict([new_done_buffer_list, new_pos_list, new_c_actions])
             c_target_qs = c_reward + cq_future * self.gamma  # 目标reward，目标q值
             self.summaries['cq_val'] = np.average(c_reward[0])
 
-            # 训练 center_critic 网络 train center critic
+            """训练 center_critic 网络 train center critic"""
             with tf.GradientTape() as tape:
                 tape.watch(self.center_critic.trainable_variables)
                 cq_values = self.center_critic([done_buffer_list, pos_list, bandvec_act])
@@ -647,7 +652,7 @@ class MAACAgent(object):
                 # cc_loss = tf.reduce_mean(tf.math.square(cq_values - c_target_qs))
             cc_grad = tape.gradient(cc_loss, self.center_critic.trainable_variables)
             self.center_critic_opt.apply_gradients(zip(cc_grad, self.center_critic.trainable_variables))
-            # 训练 center_actor 网络 train center actor
+            """训练 center_actor 网络 train center actor"""
             with tf.GradientTape() as tape:
                 tape.watch(self.center_actor.trainable_variables)
                 c_act = self.center_actor([done_buffer_list, pos_list])
