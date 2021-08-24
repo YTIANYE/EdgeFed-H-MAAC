@@ -4,5 +4,6 @@
 
 # IntelliJ project files
 .idea
+*.iml
 /logs/
 /logs_age/
