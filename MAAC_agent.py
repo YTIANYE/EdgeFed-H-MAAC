@@ -416,7 +416,8 @@ class MAACAgent(object):
 
     """actor执行动作"""
 
-    def actor_act(self, epoch):
+    # def actor_act(self, epoch):       # 注意epoch是从0开始的
+    def actor_act(self, epoch, finish_length):
         tmp = random.random()
         if tmp >= self.epsilon and epoch >= 16:  # todo epoch >= 16 经验池已充满？
             # 边缘agent的动作    agent act
@@ -476,11 +477,23 @@ class MAACAgent(object):
             band_vec = tf.expand_dims(band_vec, axis=0)  # TODO 这个有什么用
             new_bandvec = self.center_actor.predict([done_buffer_list, pos_list])
             # print('new_bandwidth{}'.format(new_bandvec[0]))
-            # 经过预测后得到的结果
+            """reward 和 经过预测后得到的结果"""
+            # new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
-            # TODO reward 第三种形式需要对new_rewards进行一下处理,修改reward时注意一起修改
-            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # TODO reward 修改
+            # 方式三：需要对new_rewards进行一下处理,修改reward时注意一起修改
+            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
             # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
+
+            # 方式四：最近16个epoch的平均完成任务数(注意epoch_num取的值过小，可能容易导致reward可选范围较小，波动较小，不容易学习)
+            # 对方式三的reward进行覆盖
+            epoch_num = 16 # 32 # 128 # 64      # 取最近64个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
+            if epoch > epoch_num:                 # 最近64个epoch平均每个epoch完成的任务数
+                new_reward = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            else:
+                new_reward = finish_length[-1] / epoch
+            new_rewards = [new_reward for reward in new_rewards]
+
             new_done_buffer_list, new_pos_list = self.env.get_center_state()
             new_done_buffer_list = tf.expand_dims(new_done_buffer_list, axis=0)
             new_pos_list = tf.expand_dims(new_pos_list, axis=0)
@@ -526,9 +539,17 @@ class MAACAgent(object):
             new_bandvec = np.random.rand(self.agent_num)  # 通过本函数可以返回一个或一组服从“0~1”均匀分布的随机样本值。
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
-            # TODO reward 第三种形式需要对new_rewards进行一下处理，修改reward时注意一起修改
-            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # TODO reward 修改
+            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
             # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
+
+            # 方式四：最近16个epoch的平均完成任务数(注意epoch_num取的值过小，可能容易导致reward可选范围较小，波动较小，不容易学习)
+            # 对方式三的reward进行覆盖
+            if epoch == 0:
+                new_reward = 0
+            else:
+                new_reward = finish_length[-1] / epoch      # 前16个都是平均值作为reward
+            new_rewards = [new_reward for reward in new_rewards]
 
         return new_rewards[-1]  # 四个reward的值都是一样的，所以返回其中之一即可
 
@@ -691,6 +712,7 @@ class MAACAgent(object):
         # tf.summary.trace_on(graph=True, profiler=True)
         os.makedirs('logs/models/' + cur_time)
         done, episode, steps, epoch, total_reward = False, 0, 0, 0, 0  # 一个episode有固定max_step个step，epochs是所有step的总计数，epochs = episode * step    理论上：一个epoch中存在多个eposide。所有的训练数据都要跑一遍算一个epoch
+        # TODO finish_length
         finish_length = []  # 完成的数
         finish_size = []  # 完成的量
         sensor_ages = []  # 数据源的年龄
@@ -750,10 +772,11 @@ class MAACAgent(object):
                 total_reward = 0
 
             """执行action 及 经验重放"""
-            cur_reward = self.actor_act(epoch)  # 获取当前reward
+            # cur_reward = self.actor_act(epoch)  # 获取当前reward
+            cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
             print('episode-%s reward:%f' % (episode, cur_reward))
             self.replay()  # 经验重放，更改网络参数
-            finish_length.append(len(self.env.world.finished_data))  # 完成 数
+            finish_length.append(len(self.env.world.finished_data))  # 完成 数     epoch时总计完成的，而不是每个epoch内完成的
             finish_size.append(sum([data[0] for data in self.env.world.finished_data]))  # 完成 量
             sensor_ages.append(list(self.env.world.sensor_age.values()))
             # agent_pos.append([[agent.position[0], agent.position[1]] for agent in self.env.world.agents])

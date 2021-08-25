@@ -38,9 +38,9 @@ max_size = 5  # 收集数据和执行数据的最大缓冲区大小
 sensor_lam = 1e3  #
 
 # 测试周期：经过大量实验实例观察一般2k个epoch开始趋于稳定，故实验周期设置为3k
-# MAX_EPOCH = 3000
+MAX_EPOCH = 3000
 # 大周期
-MAX_EPOCH = 5000
+# MAX_EPOCH = 5000
 MAX_EP_STEPS = 200
 # 小周期
 # MAX_EPOCH = 500

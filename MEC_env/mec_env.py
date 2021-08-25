@@ -90,6 +90,7 @@ class MEC_MARL_ENV(gym.Env):
     info (dict):用于调试的诊断信息，有时也用于学习，但正式的评价不允许使用该信息进行学习。 这是一个典型的agent-environment loop 的实现。
     """
 
+    # def step(self, agent_action, center_action):
     def step(self, agent_action, center_action):
         obs = []
         reward = []
@@ -110,8 +111,8 @@ class MEC_MARL_ENV(gym.Env):
             obs.append(self.get_obs(agent))  # 观察范围
             done.append(self._get_done(agent))  # 完成反馈
             # TODO reward修改
-            reward.append(self._get_age())  # 每个agent reward相同，都是平均年龄
-            # reward.append(self._get_reward())
+            # reward.append(self._get_age())  # 每个agent reward相同，都是平均年龄
+            reward.append(self._get_reward())
             info['n'].append(self._get_info(agent))
         self.state = obs
         # reward
@@ -256,6 +257,7 @@ class MEC_MARL_ENV(gym.Env):
 
     """get reward for a particular agent"""
 
+    # def _get_reward(self):
     def _get_reward(self):
         # # 方式一： 平均年龄
         # return np.mean(list(self.world.sensor_age.values()))
@@ -278,7 +280,7 @@ class MEC_MARL_ENV(gym.Env):
         # # print([state_reward, done_reward])
         # return self.alpha * done_reward[1] + self.beta * (state_reward[1] + self.sensor_num - self.map_size * self.map_size) + (1 - self.alpha - self.beta) * buffer_reward
 
-        # # 方式三
+        # 方式三：返回总完成任务数，用于接下来计算总时间的平均完成的任务数
         data_nums = len(self.world.finished_data)      # 完成任务的个数
         return data_nums
 

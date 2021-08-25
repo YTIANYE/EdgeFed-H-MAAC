@@ -337,6 +337,7 @@ class MEC_world(object):
         self.tmp_size_list = [0] * self.agent_count  # 所有agent收集数据或执行数据的缓冲区
         # [self.tmp_size_list.append([0] * self.max_buffer_size) for i in range(self.agent_count)]
         self.offloading_list = []  # 卸载列表
+        # TODO finished_data
         self.finished_data = []  # 彻底处理完毕（卸载到云端）的数据列表
         self.obs_r = obs_r  # 观察半径
         self.move_r = speed  # 移动半径
