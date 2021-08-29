@@ -1,0 +1,11 @@
+# Created by .ignore support plugin (hsz.mobi)
+### Python template
+
+
+# IntelliJ project files
+.idea
+*.iml
+/logs/
+/logs_age/
+/logs_average/
+/logs_average_nearest_epoch/
