@@ -40,10 +40,11 @@ class EdgeDevice(object):
         self.movable = movable  # 是否可以移动
         self.state = AgentState()
         self.action = Action()
-        self.done_data = []  # 卸载缓冲区，处理完的数据的缓冲区
+        self.done_data = []  # 卸载缓冲区，处理完的数据的缓冲区 List[数据大小、年龄、编号]
         self.offloading_idle = True  # 卸载表示， True需要卸载
-        self.total_data = {}  # 每个agent的总数据 [数据大小，年龄，数据源索引]
-        self.computing_rate = 2e4  # edge端 数据处理速率 16
+        self.total_data = {}  # 每个agent的收集到的总数据 [数据大小，年龄，数据源索引]
+        # TODO 数据处理速率
+        self.computing_rate = 2e4  # edge端 数据处理速率 20000
         self.computing_idle = True  # 执行缓冲区任务是否已经执行的标志
         self.index_dim = 2  # TODO
         self.collecting_sensors = []
@@ -130,16 +131,23 @@ class EdgeDevice(object):
                 self.action.execution[np.random.randint(len(data2process))] = 1  # 重新随机选择下一个要执行的任务
                 # print(self.action.execution)
             self.computing_idle = False  # 执行完毕（还是失败）
+            # 调试用
+            if self.total_data[data2process[self.action.execution.index(1)][0]][0] >= 20000:
+                print("数据大小大于20000的", self.total_data[data2process[self.action.execution.index(1)][0]][0])
             tmp_size += min(self.total_data[data2process[self.action.execution.index(1)][0]][0],
-                            self.computing_rate * t)  # 如果要处理的数据大小超过了该时间段内的处理能力，新增加的空间大小则是这段时间里处理的数据总大小
+                            self.computing_rate * t)  # 如果要处理的数据大小超过了该时间段内的处理能力，新增加的空间大小则是这段时间里最大处理能力所能处理的数据大小
             self.total_data[data2process[self.action.execution.index(1)][0]][
                 0] -= self.computing_rate * t  # 该时间段内 需要处理的数据量减少
             if self.total_data[data2process[self.action.execution.index(1)][0]][0] <= 0:  # 数据全部处理
-                self.total_data[data2process[self.action.execution.index(1)][0]][0] = tmp_size
+                self.total_data[data2process[self.action.execution.index(1)][0]][0] = tmp_size   # 这里没有问题，本身就是这样设计的：大于20000的数据在减去20000之后，这个20000可能会加入到下一step执行的某个小于20000的任务（由于下一步执行任务随机，不一定是被减去20000的那个任务），作为一个完成的任务放在done_data中，年龄不受影响，但是两个源自不同数据源的任务的数据大小交换了20000，
                 self.done_data.append(self.total_data[data2process[self.action.execution.index(1)][0]])
                 self.total_data.pop(data2process[self.action.execution.index(1)][0])  # 这一数据被处理完
                 tmp_size = 0
-        return tmp_size  # 数据处理完了 返回0，否则返回暂存区大小      # TODO tmp_size含义
+                # tmp_size含义：如果一个数据源的某个任务数据超过20000，需要处理多次，tmp_size记录处理过的数据量，当同一阿哥明天的total_data中的某个数据大小小于20000，处理完该任务，连同之前处理的n个20000加在一起等待卸载，tmp_size记录的就是该agent处理完的数据大小，不区分数据源
+        # 调试用
+        if tmp_size > 0:
+            print(tmp_size)
+        return tmp_size  # 数据处理完了 返回0，否则返回暂存区大小      # 因为处理能力20000比较大，通常会返回0
 
 
 def agent_com(agent_list):
@@ -162,31 +170,32 @@ class Sensor(object):
         Sensor.sensor_cnt += 1
         self.position = pos
         self.weight = weight
-        self.data_rate = data_rate  # generate rate
+        self.data_rate = data_rate  # generate rate # 数据生成速率
         self.bandwidth = bandwidth
         self.trans_rate = 8e3  # to be completed        #TODO
         self.data_buffer = []  # 数据源端的缓冲区
         self.max_data_size = max_ds
         self.data_state = bool(len(self.data_buffer))  # 缓冲区是否有数据
         self.collect_state = False  # 数据源的收集状态
-        self.lam = lam
+        self.lam = lam      # 1000
         self.noise_power = 1e-13 * self.bandwidth
         self.gen_threshold = 0.3
 
-    # 数据源生成数据
+    """数据源生成数据"""
     def data_gen(self, t=1):
-        # update age
+        # 更新年龄 update age
         if self.data_buffer:
             for i in range(len(self.data_buffer)):
                 self.data_buffer[i][1] += t
+        # TODO 生成新数据
         new_data = self.data_rate * np.random.poisson(self.lam)  # 数据大小服从泊松分布 lam-发生率或已知次数
         # new_data = min(new_data, self.max_data_size)
         if new_data >= self.max_data_size or random.random() >= self.gen_threshold:  # 数据过大抛弃新生成的数据，以一定的概率抛弃生成的数据
             return
         if new_data:
             self.data_buffer.append([new_data, 0, self.no])  # 数据大小， 年龄， 数据源编号
-            self.data_state = True  # 数据状态
-
+            self.data_state = True  # 数据状态，数据源的缓冲区是否含有数据
+        # 生成数据设置了单个小任务的数据大小，但是数据源的数据缓存是无限的，edge收集单个数据源的数据量是无限的
 
 collecting_channel_param = {'suburban': (4.88, 0.43, 0.1, 21),
                             'urban': (9.61, 0.16, 1, 20),
@@ -236,9 +245,9 @@ def data_collecting(sensors, agent, hovering_time):
                 # obs_sensor.append(sensor)
                 # if not (sensor.no in agent.data_buffer.keys()):
                 #     agent.data_buffer[sensor.no] = []
-                tmp_size = 0
+                tmp_size = 0    # 计算数据源缓冲区中全部任务的数据总大小，然后上传到agent
                 # trans_rate = collecting_rate(sensor, agent)
-                for data in sensor.data_buffer:  # 数据源的缓冲区加入数据
+                for data in sensor.data_buffer:  # 数据源的缓冲区加入数据      # TODO 考虑做一个数量上或数据总量上的限制
                     tmp_size += data[0]
                     # data[1] += tmp_size / self.trans_rate  # age update
                 if sensor.no in agent.data_buffer.keys():  # edge agent 端收集到数据
@@ -246,7 +255,7 @@ def data_collecting(sensors, agent, hovering_time):
                 else:
                     agent.data_buffer[sensor.no] = [tmp_size]
                 data_properties.append(tmp_size / sensor.trans_rate)  # 传输所需要的时间
-                agent.total_data[sensor.no] = [tmp_size, sensor.data_buffer[-1][1], sensor.no]  # edge agent 添加总数据
+                agent.total_data[sensor.no] = [tmp_size, sensor.data_buffer[-1][1], sensor.no]  # edge agent 添加总数据  # TODO 年龄为什么是最后一个任务的年龄，即不断取最新的任务的年龄作为收集自这一数据源的所有数据的年龄
                 # agent.total_data[sensor.no] = [tmp_size, np.average([x[1] for x in sensor.data_buffer]), sensor.no]
                 sensor.data_buffer = []
 
@@ -326,7 +335,7 @@ class MEC_world(object):
         self.agent_count = agent_num
         self.max_buffer_size = max_size  # 缓冲区最大尺寸（即最大能够存储的数据个数）# 收集数据和执行数据的最大缓冲区大小
         sensor_bandwidth = 1000  # 数据源带宽
-        max_ds = sensor_lam * 2  # TODO:
+        max_ds = sensor_lam * 2  # 2000 # TODO:
         data_gen_rate = 1  # 数据生成速率
         self.offloading_slice = 1  # 卸载切片
         self.execution_slice = 1  # 执行切片
@@ -334,15 +343,16 @@ class MEC_world(object):
         self.DS_map = np.zeros([map_size, map_size])  # 地图：数据源的位置    # zeros() 返回来一个给定形状和类型的用0填充的数组
         self.DS_state = np.ones([map_size, map_size, 2])  # 数据源状态 前两个维度是位置坐标，最后维度为2表示存储数据大小和数据年龄
         self.hovering_list = [0] * self.agent_count  # 悬停agent列表，记录每个agent的悬停时间，即正在收集数据的时间
-        self.tmp_size_list = [0] * self.agent_count  # 所有agent收集数据或执行数据的缓冲区
+        self.tmp_size_list = [0] * self.agent_count  # 存放每个agent正在处理的数据大小
         # [self.tmp_size_list.append([0] * self.max_buffer_size) for i in range(self.agent_count)]
         self.offloading_list = []  # 卸载列表
+        # TODO finished_data
         self.finished_data = []  # 彻底处理完毕（卸载到云端）的数据列表
         self.obs_r = obs_r  # 观察半径
         self.move_r = speed  # 移动半径
         self.collect_r = collect_r  # 收集覆盖半径
         self.sensor_age = {}  # 所有数据源的数据的年龄
-        # 数据源初始化 random.seed(7)
+        """数据源初始化 random.seed(7)"""
         self.sensor_pos = [
             random.choices([i for i in range(int(0.1 * self.map_size), int(0.9 * self.map_size))], k=sensor_num),
             # k 定义返回列表长度的整数
@@ -356,7 +366,7 @@ class MEC_world(object):
                        max_ds, lam=sensor_lam))
             self.sensor_age[i] = 0
             self.DS_map[self.sensor_pos[0][i], self.sensor_pos[1][i]] = 1
-        # 边缘设备初始化
+        """边缘设备初始化"""
         self.agent_pos_init = [
             random.sample([i for i in range(int(0.15 * self.map_size), int(0.85 * self.map_size))], agent_num),
             random.sample([i for i in range(int(0.15 * self.map_size), int(0.85 * self.map_size))], agent_num)]
@@ -378,15 +388,19 @@ class MEC_world(object):
             if sensor.data_buffer:
                 data_size = sum(i[0] for i in sensor.data_buffer)  # 该数据源总数据大小
                 # update data source state, note that the (x,y) is reversed to the matrix index (i,j)
-                self.DS_state[sensor.position[1], sensor.position[0]] = [  # 最小的维度2存储内容
+                self.DS_state[sensor.position[1], sensor.position[0]] = [  # 最小的维度2 存储内容
                     data_size, sensor.data_buffer[0][1]]  # 数据大小和年龄
 
         # edge process  offloading collect
         logging.info("edge operation")
         age_dict = {}  # 记录处理完的数据的年龄
         for i, agent in enumerate(self.agents):
+            # 调试用
+            # if self.tmp_size_list[i] >= 20000:
+            #     print("tmp_size_list大于20000", self.tmp_size_list[i])
+
             # 执行过程  edge process
-            self.tmp_size_list[i] = agent.process(self.tmp_size_list[i])  # TODO tmp_size_list含义
+            self.tmp_size_list[i] = agent.process(self.tmp_size_list[i])  # tmp_size_list 每个agent正在处理的数据大小
             # 卸载过程  offloading
             finish_flag, data_dict = offloading(agent, self.center)  # data-dict {数据源索引:[数据大小， 年龄]}
             # update reward state

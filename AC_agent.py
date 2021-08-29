@@ -12,6 +12,7 @@ import imageio
 import glob
 import tqdm
 import json
+import platform
 
 
 def get_center_state(env):
@@ -254,6 +255,9 @@ class ACAgent(object):
                 agent_act_list.append([move, execution, offloading])
 
             new_state_map, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            # reward 第三种形式需要对new_rewards进行一下处理
+            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
             new_sensor_map, agent_map = self.env.get_statemap()
             new_total_buffer_list, new_done_buffer_list, new_pos_list = get_center_state(self.env)
             new_total_buffer_list = tf.expand_dims(new_total_buffer_list, axis=0)
@@ -279,6 +283,9 @@ class ACAgent(object):
             new_bandvec = np.random.rand(self.agent_num)
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            # reward 第三种形式需要对new_rewards进行一下处理
+            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
 
         return new_rewards[-1]
 
@@ -400,7 +407,8 @@ class ACAgent(object):
                     tf.summary.scalar('Loss/center_actor_loss', self.summaries['center-actor_loss'], step=epoch)
                     tf.summary.scalar('Loss/center_critic_loss', self.summaries['center-critic_loss'], step=epoch)
                     tf.summary.scalar('Stats/cq_val', self.summaries['cq_val'], step=epoch)
-                tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
+                # tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
+                tf.summary.scalar('Main/step_reward', cur_reward, step=epoch)
 
             summary_writer.flush()
 
@@ -413,11 +421,12 @@ class ACAgent(object):
         """gif"""
         self.env.render(env_log_dir, epoch, True)
         img_paths = glob.glob(env_log_dir + '/*.png')
-        # linux和windows文件路径斜杠不同，注意区分
-        # linux 上运行
-        # img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
-        # 源代码 Windows上运行
-        img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
+        # linux(/)和windows(\)文件路径斜杠不同，注意区分
+        system = platform.system()  # 获取操作系统类型
+        if system == 'Windows':
+            img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
+        elif system == 'Linux':
+            img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
 
         gif_images = []
         for path in img_paths:

@@ -24,8 +24,10 @@ plt.rcParams['figure.figsize'] = (9, 9)
 # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
 map_size = 200
-agent_num = 4
-sensor_num = 30
+# agent_num = 4
+# sensor_num = 30
+agent_num = 8
+sensor_num = 60
 obs_r = 60
 collect_r = 40
 speed = 6
@@ -33,10 +35,8 @@ max_size = 5
 sensor_lam = 1e3
 
 
-# MAX_EPOCH = 5000
-MAX_EPOCH = 50
-# MAX_EP_STEPS = 200
-MAX_EP_STEPS = 20
+MAX_EPOCH = 5000
+MAX_EP_STEPS = 200
 LR_A = 0.001    # learning rate for actor
 LR_C = 0.002   # learning rate for critic
 GAMMA = 0.85     # reward discount

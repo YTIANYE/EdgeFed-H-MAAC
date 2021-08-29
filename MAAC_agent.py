@@ -1,5 +1,5 @@
 import tensorflow as tf
-from keras.losses import huber_loss
+# from keras.losses import huber_loss
 from tensorflow import keras
 from tensorflow.keras import layers
 import numpy as np
@@ -13,6 +13,7 @@ import imageio
 import glob
 import tqdm
 import json
+import platform
 
 # tf.random.set_seed(11)
 
@@ -104,7 +105,6 @@ def agent_actor(input_dim_list, cnn_kernel_size, move_r):  # input_dim_list [(12
 
 # inputs: sensor_map, agent_map, bandwidth_vector;
 # outputs: bandwidth_vec
-
 def center_actor(input_dim_list, cnn_kernel_size):
     done_buffer_list = keras.Input(
         shape=input_dim_list[0])  # 缓冲区列表形状 shape = (None, 4, 2, 5)       # 实例化一个keras张量,shape: 形状元组（整型）
@@ -281,10 +281,13 @@ def update_target_net(model, target, tau=0.8):
     weights = model.get_weights()  # 仅仅是获取权重，不保存
     target_weights = target.get_weights()
     for i in range(len(target_weights)):  # set tau% of target model to be new weights
-        target_weights[i] = weights[i] * (1 - tau) + target_weights[i] * tau        # tau # soft replacement  目标更新权重
+        target_weights[i] = weights[i] * (1 - tau) + target_weights[i] * tau  # tau # soft replacement  目标更新权重
     target.set_weights(target_weights)  # 给模型设置权重
 
+
 """联邦学习 根据其他agent的参数更新自己参数的过程"""
+
+
 def merge_fl(nets, omega=0.5):
     for agent_no in range(len(nets)):
         target_params = nets[agent_no].get_weights()
@@ -299,7 +302,10 @@ def merge_fl(nets, omega=0.5):
             # print([others.shape, target_params[i].shape])
         nets[agent_no].set_weights(target_params)
 
+
 """选定移动位置"""
+
+
 def circle_argmax(move_dist, move_r):
     max_pos = np.argwhere(tf.squeeze(move_dist, axis=-1) == np.max(move_dist))
     # print(tf.squeeze(move_dist, axis=-1))
@@ -364,7 +370,7 @@ class MAACAgent(object):
         update_target_net(self.center_critic, self.target_center_critic, tau=0)
         # TODO opt 是干什么的
         self.agent_actor_opt = []
-        self.agent_critic_opt = []      # agent_critic 的操作，更新梯度
+        self.agent_critic_opt = []  # agent_critic 的操作，更新梯度
         self.center_actor_opt = keras.optimizers.Adam(
             learning_rate=lr_ca)  # learn rate center actor       # 优化器keras.optimizers.Adam()是解决这个问题的一个方案。其大概的思想是开始的学习率设置为一个较大的值，然后根据次数的增多，动态的减小学习率，以实现效率和效果的兼得。
         self.center_critic_opt = keras.optimizers.Adam(learning_rate=lr_cc)  # learn rate center critic
@@ -409,43 +415,45 @@ class MAACAgent(object):
         keras.utils.plot_model(self.agent_critics[0], 'logs/model_figs/new_agent_critic.png', show_shapes=True)
 
     """actor执行动作"""
-    def actor_act(self, epoch):
+
+    # def actor_act(self, epoch):       # 注意epoch是从0开始的
+    def actor_act(self, epoch, finish_length):
         tmp = random.random()
-        if tmp >= self.epsilon and epoch >= 16:         # todo epoch >= 16 经验池已充满？
+        if tmp >= self.epsilon and epoch >= 16:  # todo epoch >= 16 经验池已充满？
             # 边缘agent的动作    agent act
-            agent_act_list = []     # 所有agent 动作 列表（包含移动，执行，卸载）
-            softmax_list = []       # softmax 列表（包含移动 和 对缓冲区的操作）
+            agent_act_list = []  # 所有agent 动作 列表（包含移动，执行，卸载）
+            softmax_list = []  # softmax 列表（包含移动 和 对缓冲区的操作）
             cur_state_list = []
-            band_vec = np.zeros(self.agent_num)     # 带宽比例
+            band_vec = np.zeros(self.agent_num)  # 带宽比例
             for i, agent in enumerate(self.agents):
                 # actor = self.agent_actors[i]
-                state_map = tf.expand_dims(self.env.get_obs(agent), axis=0)     # shape = (1, 121, 121, 2)
+                state_map = tf.expand_dims(self.env.get_obs(agent), axis=0)  # shape = (1, 121, 121, 2)
                 # pos = tf.expand_dims(agent.position, axis=0)
                 # print('agent{}pos:{}'.format(i, pos))
-                total_data_state = tf.expand_dims(agent.get_total_data(), axis=0)       # 增加一个维度 shape = (1, 2, 5)
-                done_data_state = tf.expand_dims(agent.get_done_data(), axis=0)         # shape = (1, 2, 5)
-                band = tf.expand_dims(agent.action.bandwidth, axis=0)       # shape = (1,)
+                total_data_state = tf.expand_dims(agent.get_total_data(), axis=0)  # 增加一个维度 shape = (1, 2, 5)
+                done_data_state = tf.expand_dims(agent.get_done_data(), axis=0)  # shape = (1, 2, 5)
+                band = tf.expand_dims(agent.action.bandwidth, axis=0)  # shape = (1,)
                 # print('band{}'.format(agent.action.bandwidth))
-                band_vec[i] = agent.action.bandwidth        # 带宽比例
-                assemble_state = [state_map, total_data_state, done_data_state, band]       # 总状态
+                band_vec[i] = agent.action.bandwidth  # 带宽比例
+                assemble_state = [state_map, total_data_state, done_data_state, band]  # 总状态
                 # print(['agent%s' % i, sum(sum(state_map))])
                 cur_state_list.append(assemble_state)
                 # print(total_data_state.shape)
                 # agent_actor 预测，根据预测进行操作（移动位置、执行、卸载、）
                 action_output = self.agent_actors[i].predict(assemble_state)
-                move_dist = action_output[0][0]     # 移动
+                move_dist = action_output[0][0]  # 移动
                 sio.savemat('debug.mat', {'state': self.env.get_obs(agent), 'move': move_dist})
                 # print(move_dist)
                 # print(move_dist.shape)
-                op_dist = action_output[1][0]       # 缓冲区操作
+                op_dist = action_output[1][0]  # 缓冲区操作
                 # print(op_dist.shape)
                 # move_ori = np.unravel_index(np.argmax(move_dist), move_dist.shape)
                 move_ori = circle_argmax(move_dist, self.env.move_r)
-                move = [move_ori[1] - self.env.move_r, move_ori[0] - self.env.move_r]       # 移动到的位置
+                move = [move_ori[1] - self.env.move_r, move_ori[0] - self.env.move_r]  # 移动到的位置
                 execution = [0] * agent.max_buffer_size
                 offloading = [0] * agent.max_buffer_size
-                execution[np.argmax(op_dist[0])] = 1        # 选定执行的任务 # np.argmax 返回一个numpy数组中最大值的索引值
-                offloading[np.argmax(op_dist[1])] = 1       # 选定卸载的任务
+                execution[np.argmax(op_dist[0])] = 1  # 选定执行的任务 # np.argmax 返回一个numpy数组中最大值的索引值
+                offloading[np.argmax(op_dist[1])] = 1  # 选定卸载的任务
                 move_softmax = np.zeros(move_dist.shape)
                 op_softmax = np.zeros(self.buffstate_shape)
 
@@ -460,34 +468,48 @@ class MAACAgent(object):
                 agent_act_list.append([move, execution, offloading])
                 softmax_list.append([move_softmax, op_softmax])
             # print(agent_act_list)
+
             # 中心agent动作     center act
-            done_buffer_list, pos_list = self.env.get_center_state()    # 获取边缘agent位置以及卸载缓冲区数据大小和年龄
+            done_buffer_list, pos_list = self.env.get_center_state()  # 获取边缘agent位置以及卸载缓冲区数据大小和年龄
             done_buffer_list = tf.expand_dims(done_buffer_list, axis=0)
             # print(done_buffer_list)
             pos_list = tf.expand_dims(pos_list, axis=0)
-            band_vec = tf.expand_dims(band_vec, axis=0)         # TODO 这个有什么用
+            band_vec = tf.expand_dims(band_vec, axis=0)  # TODO 这个有什么用
             new_bandvec = self.center_actor.predict([done_buffer_list, pos_list])
             # print('new_bandwidth{}'.format(new_bandvec[0]))
-            # 经过预测后得到的结果
+            """reward 和 经过预测后得到的结果"""
+            # new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
+            # TODO reward 修改
+            # 方式三：需要对new_rewards进行一下处理,修改reward时注意一起修改
+            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+
+            # 方式四：最近epoch_num个epoch的平均完成任务数     对方式三的reward进行覆盖
+            # epoch_num = 200 # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
+            # if epoch > epoch_num:                 # 最近64个epoch平均每个epoch完成的任务数
+            #     new_reward = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            # else:
+            #     new_reward = finish_length[-1] / epoch
+            # new_rewards = [new_reward for reward in new_rewards]
+
             new_done_buffer_list, new_pos_list = self.env.get_center_state()
             new_done_buffer_list = tf.expand_dims(new_done_buffer_list, axis=0)
             new_pos_list = tf.expand_dims(new_pos_list, axis=0)
 
-            # 经验池 record memory
+            """经验池 添加内容 record memory"""
             # edge agent 的经验池
             for i, agent in enumerate(self.agents):
-                state_map = new_state_maps[i]       # 观察范围
+                # state_map = new_state_maps[i]  # 观察范围
                 # print(['agent%s' % i, sum(sum(state_map))])
                 # pos = agent.position
-                total_data_state = agent.get_total_data()
-                done_data_state = agent.get_done_data()     # 获取完成数据 shape = （2， 5）
-                state_map = tf.expand_dims(self.env.get_obs(agent), axis=0)     # 观察范围
+                # total_data_state = agent.get_total_data()
+                # done_data_state = agent.get_done_data()  # 获取完成数据 shape = （2， 5）
+                state_map = tf.expand_dims(self.env.get_obs(agent), axis=0)  # 观察范围
                 # pos = tf.expand_dims(agent.position, axis=0)
-                total_data_state = tf.expand_dims(agent.get_total_data(), axis=0)       # 执行缓冲区全部数据 shape = （1， 2， 5）
-                done_data_state = tf.expand_dims(agent.get_done_data(), axis=0)     # 完成缓冲区数据 shape = （1， 2， 5）
-                band = tf.expand_dims(agent.action.bandwidth, axis=0)               # 带宽
-                new_states = [state_map, total_data_state, done_data_state, band]       # 新状态
+                total_data_state = tf.expand_dims(agent.get_total_data(), axis=0)  # 执行缓冲区全部数据 shape = （1， 2， 5）
+                done_data_state = tf.expand_dims(agent.get_done_data(), axis=0)  # 完成缓冲区数据 shape = （1， 2， 5）
+                band = tf.expand_dims(agent.action.bandwidth, axis=0)  # 带宽
+                new_states = [state_map, total_data_state, done_data_state, band]  # 新状态
                 # agent 的缓冲区添加新状态
                 if agent.no in self.agent_memory.keys():
                     self.agent_memory[agent.no].append(
@@ -504,34 +526,52 @@ class MAACAgent(object):
             # agents
             agent_act_list = []
             for i, agent in enumerate(self.agents):
-                move = random.sample(list(self.move_dict.values()), 1)[0]       # move 下一个移动位置的坐标(x, y) # random.sample() 截取列表的指定长度的随机数，但是不会改变列表本身的排序
-                execution = [0] * agent.max_buffer_size                         # 执行缓冲区
-                offloading = [0] * agent.max_buffer_size                        # 卸载缓冲区
-                execution[np.random.randint(agent.max_buffer_size)] = 1         # 随机选一个执行
-                offloading[np.random.randint(agent.max_buffer_size)] = 1        # 随机选一个卸载
+                move = random.sample(list(self.move_dict.values()), 1)[
+                    0]  # move 下一个移动位置的坐标(x, y) # random.sample() 截取列表的指定长度的随机数，但是不会改变列表本身的排序
+                execution = [0] * agent.max_buffer_size  # 执行缓冲区
+                offloading = [0] * agent.max_buffer_size  # 卸载缓冲区
+                execution[np.random.randint(agent.max_buffer_size)] = 1  # 随机选一个执行
+                offloading[np.random.randint(agent.max_buffer_size)] = 1  # 随机选一个卸载
                 agent_act_list.append([move, execution, offloading])
             # center
-            new_bandvec = np.random.rand(self.agent_num)                        # 通过本函数可以返回一个或一组服从“0~1”均匀分布的随机样本值。
+            new_bandvec = np.random.rand(self.agent_num)  # 通过本函数可以返回一个或一组服从“0~1”均匀分布的随机样本值。
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            # TODO reward 修改
+            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
 
-        return new_rewards[-1]      # TODO 如果四个agent不是联合的reward， 为什么只返回最后一个？
-    """经验重放过程"""
+            # 方式四：最近n个epoch的平均完成任务数，    需要对方式三的reward进行覆盖
+            # if epoch == 0:
+            #     new_reward = 0
+            # else:
+            #     new_reward = finish_length[-1] / epoch      # 前16个都是平均值作为reward
+            # new_rewards = [new_reward for reward in new_rewards]
+
+        return new_rewards[-1]  # 四个reward的值都是一样的，所以返回其中之一即可
+
+    """经验重放过程,修改网络参数"""
+
     # @tf.function(experimental_relax_shapes=True)
     def replay(self):
-        # agent 经验回放    agent replay
+        """edge 经验回放    agent replay"""
         for no, agent_memory in self.agent_memory.items():
             if len(agent_memory) < self.batch_size:
                 continue
             # print([len(agent_memory[-100:]), self.batch_size])
+            # 这里sample截取的有问题，应该是agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
+            # 方式一：原sample方式
+            # samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+            #     agent_memory[-self.batch_size * 2:],
+            #     int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
+            # 方式二：改后的sample方式
             samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-                # todo 这里截取的有问题，应该是agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
-                agent_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))     # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
+                agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
+                int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
             # t_agent_actor = self.target_agent_actors[no]
             # t_agent_critic = self.target_agent_critics[no]
             # agent_actor = self.agent_actors[no]
             # agent_critic = self.agent_critics[no]
-            # 获取sample中的信息
+            """获取sample中的信息"""
             # state
             state_map = np.vstack([sample[0][0] for sample in samples])
             # pos = np.vstack([sample[0][1] for sample in samples])
@@ -552,7 +592,7 @@ class MAACAgent(object):
             # # done
             # done = [sample[4] for sample in samples]
 
-            # 下一步的action 和 reward   next actions & rewards
+            """下一步的action 和 reward   next actions & rewards"""
             new_actions = self.target_agent_actors[no].predict(
                 [new_state_map, new_total_data_state, new_done_data_state, new_band])
             # new_move = np.array([self.move_dict[np.argmax(single_sample)] for single_sample in new_actions[0]])
@@ -562,29 +602,30 @@ class MAACAgent(object):
             # print('qfuture{}'.format(q_future))
             target_qs = a_reward + q_future * self.gamma
 
-            # 训练策略网络 train critic
-            with tf.GradientTape() as tape:     # 根据某个函数的输入变量来计算它的导数,Tensorflow 会把 ‘tf.GradientTape’ 上下文中执行的所有操作都记录在一个磁带上 (“tape”)。 然后基于这个磁带和每次操作产生的导数，用反向微分法（“reverse mode differentiation”）来计算这些被“记录在案”的函数的导数。
+            """训练策略网络 train critic"""
+            with tf.GradientTape() as tape:  # 根据某个函数的输入变量来计算它的导数,Tensorflow 会把 ‘tf.GradientTape’ 上下文中执行的所有操作都记录在一个磁带上 (“tape”)。 然后基于这个磁带和每次操作产生的导数，用反向微分法（“reverse mode differentiation”）来计算这些被“记录在案”的函数的导数。
                 # tape.watch(self.agent_critics[no].trainable_variables)
                 q_values = self.agent_critics[no](
                     [state_map, total_data_state, done_data_state, move, op_softmax, band])
                 ac_error = q_values - tf.cast(target_qs, dtype=tf.float32)
                 # ac_error = q_values - target_qs
-                ac_loss = tf.reduce_mean(tf.math.square(ac_error))      # agent_critic_loss
+                ac_loss = tf.reduce_mean(tf.math.square(ac_error))  # agent_critic_loss
             # print('agent%s' % no)
             # print([q_values, target_qs, ac_error, ac_loss])
             ac_grad = tape.gradient(ac_loss, self.agent_critics[no].trainable_variables)
             # print(ac_grad)
-            self.agent_critic_opt[no].apply_gradients(zip(ac_grad, self.agent_critics[no].trainable_variables))     # zip()的目的是映射多个容器的相似索引，以便可以将它们用作单个实体使用
+            self.agent_critic_opt[no].apply_gradients(
+                zip(ac_grad, self.agent_critics[no].trainable_variables))  # zip()的目的是映射多个容器的相似索引，以便可以将它们用作单个实体使用
 
-            # 训练动作网络 train actor
+            """训练动作网络 train actor"""
             with tf.GradientTape() as tape:
-                tape.watch(self.agent_actors[no].trainable_variables)       # 确保某个tensor被tape追踪
+                tape.watch(self.agent_actors[no].trainable_variables)  # 确保某个tensor被tape追踪
                 actions = self.agent_actors[no]([state_map, total_data_state, done_data_state, band])
                 # actor_move = np.array([self.move_dict[np.argmax(single_sample)] for single_sample in actions[0]])
                 new_r = self.agent_critics[no](
                     [state_map, total_data_state, done_data_state, actions[0], actions[1], band])
                 # print(new_r)
-                aa_loss = tf.reduce_mean(new_r)     # agent actor loss
+                aa_loss = tf.reduce_mean(new_r)  # agent actor loss
                 # print(aa_loss)
             aa_grad = tape.gradient(aa_loss, self.agent_actors[no].trainable_variables)
             # print(aa_grad)
@@ -594,45 +635,52 @@ class MAACAgent(object):
             self.summaries['agent%s-critic_loss' % no] = ac_loss
             self.summaries['agent%s-actor_loss' % no] = aa_loss
 
-        # 中心经验回放    agent replay
+        """中心经验回放    agent replay"""
         if len(self.center_memory) < self.batch_size:
             return
-        # todo 这里截取的有问题，应该是center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
-        center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-            self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
-        done_buffer_list = np.vstack([sample[0][0] for sample in center_samples])
-        pos_list = np.vstack([sample[0][1] for sample in center_samples])
-        bandvec_act = np.vstack([sample[1] for sample in center_samples])
-        c_reward = tf.expand_dims([sample[2] for sample in center_samples], axis=-1)
-        # new states
-        new_done_buffer_list = np.vstack([sample[3][0] for sample in center_samples])
-        new_pos_list = np.vstack([sample[3][1] for sample in center_samples])
-        # next actions & reward
-        new_c_actions = self.target_center_actor.predict([new_done_buffer_list, new_pos_list])
-        cq_future = self.target_center_critic.predict([new_done_buffer_list, new_pos_list, new_c_actions])
-        c_target_qs = c_reward + cq_future * self.gamma
-        self.summaries['cq_val'] = np.average(c_reward[0])
+        else:
+            # 这里sample截取的有问题，应该是self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
+            # 方式一：原sample方式
+            # center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+            #     self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
+            # 方式二：改后的sample方式
+            center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+                self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
+                int(self.batch_size * (1 - self.sample_prop)))
+            """获取sample中的信息"""
+            done_buffer_list = np.vstack([sample[0][0] for sample in center_samples])
+            pos_list = np.vstack([sample[0][1] for sample in center_samples])
+            bandvec_act = np.vstack([sample[1] for sample in center_samples])
+            c_reward = tf.expand_dims([sample[2] for sample in center_samples], axis=-1)
+            """new states"""
+            new_done_buffer_list = np.vstack([sample[3][0] for sample in center_samples])
+            new_pos_list = np.vstack([sample[3][1] for sample in center_samples])
+            """next actions & reward"""
+            new_c_actions = self.target_center_actor.predict([new_done_buffer_list, new_pos_list])
+            cq_future = self.target_center_critic.predict([new_done_buffer_list, new_pos_list, new_c_actions])
+            c_target_qs = c_reward + cq_future * self.gamma  # 目标reward，目标q值
+            self.summaries['cq_val'] = np.average(c_reward[0])
 
-        # 训练中心策略网络 train center critic
-        with tf.GradientTape() as tape:
-            tape.watch(self.center_critic.trainable_variables)
-            cq_values = self.center_critic([done_buffer_list, pos_list, bandvec_act])
-            cc_loss = tf.reduce_mean(tf.math.square(cq_values - tf.cast(c_target_qs, dtype=tf.float32)))
-            # cc_loss = tf.reduce_mean(tf.math.square(cq_values - c_target_qs))
-        cc_grad = tape.gradient(cc_loss, self.center_critic.trainable_variables)
-        self.center_critic_opt.apply_gradients(zip(cc_grad, self.center_critic.trainable_variables))
-        # 训练中心动作网络 train center actor
-        with tf.GradientTape() as tape:
-            tape.watch(self.center_actor.trainable_variables)
-            c_act = self.center_actor([done_buffer_list, pos_list])
-            ca_loss = tf.reduce_mean(self.center_critic([done_buffer_list, pos_list, c_act]))
-        # print(self.center_critic([sensor_maps, agent_maps, c_act]))
-        ca_grad = tape.gradient(ca_loss, self.center_actor.trainable_variables)
-        # print(ca_grad)
-        self.center_actor_opt.apply_gradients(zip(ca_grad, self.center_actor.trainable_variables))
-        # print(ca_loss)
-        self.summaries['center-critic_loss'] = cc_loss
-        self.summaries['center-actor_loss'] = ca_loss
+            """训练 center_critic 网络 train center critic"""
+            with tf.GradientTape() as tape:
+                tape.watch(self.center_critic.trainable_variables)
+                cq_values = self.center_critic([done_buffer_list, pos_list, bandvec_act])
+                cc_loss = tf.reduce_mean(tf.math.square(cq_values - tf.cast(c_target_qs, dtype=tf.float32)))
+                # cc_loss = tf.reduce_mean(tf.math.square(cq_values - c_target_qs))
+            cc_grad = tape.gradient(cc_loss, self.center_critic.trainable_variables)
+            self.center_critic_opt.apply_gradients(zip(cc_grad, self.center_critic.trainable_variables))
+            """训练 center_actor 网络 train center actor"""
+            with tf.GradientTape() as tape:
+                tape.watch(self.center_actor.trainable_variables)
+                c_act = self.center_actor([done_buffer_list, pos_list])
+                ca_loss = tf.reduce_mean(self.center_critic([done_buffer_list, pos_list, c_act]))
+            # print(self.center_critic([sensor_maps, agent_maps, c_act]))
+            ca_grad = tape.gradient(ca_loss, self.center_actor.trainable_variables)
+            # print(ca_grad)
+            self.center_actor_opt.apply_gradients(zip(ca_grad, self.center_actor.trainable_variables))
+            # print(ca_loss)
+            self.summaries['center-critic_loss'] = cc_loss
+            self.summaries['center-actor_loss'] = ca_loss
 
     # TODO:运行报错
     #  WARNING:tensorflow:Compiled the loaded model, but the compiled metrics have yet to be built. 已编译加载的模型，但尚未构建已编译的度量。
@@ -643,10 +691,13 @@ class MAACAgent(object):
             self.agent_critics[i].save('logs/models/{}/agent-critic-{}_episode{}.h5'.format(time_str, i, episode))
         self.center_actor.save('logs/models/{}/center-actor_episode{}.h5'.format(time_str, episode))
         self.center_critic.save('logs/models/{}/center-critic_episode{}.h5'.format(time_str, episode))
+
     """训练"""
+
     # @tf.function
     def train(self, max_epochs=2000, max_step=500, up_freq=8, render=False, render_freq=1, FL=False, FL_omega=0.5,
               anomaly_edge=False):
+        """初始化变量"""
         cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
         train_log_dir = 'logs/fit/' + cur_time
         env_log_dir = 'logs/env/env' + cur_time
@@ -657,9 +708,10 @@ class MAACAgent(object):
         # tf.summary.trace_on(graph=True, profiler=True)
         os.makedirs('logs/models/' + cur_time)
         done, episode, steps, epoch, total_reward = False, 0, 0, 0, 0  # 一个episode有固定max_step个step，epochs是所有step的总计数，epochs = episode * step    理论上：一个epoch中存在多个eposide。所有的训练数据都要跑一遍算一个epoch
-        finish_length = []      # 完成的数
-        finish_size = []        # 完成的量
-        sensor_ages = []        # 数据源的年龄
+        # TODO finish_length
+        finish_length = []  # 完成的数
+        finish_size = []  # 完成的量
+        sensor_ages = []  # 数据源的年龄
         # sensor_map = self.env.DS_map
         # sensor_pos_list = self.env.world.sensor_pos
         # sensor_states = [self.env.DS_state]
@@ -682,7 +734,11 @@ class MAACAgent(object):
         #     anomaly_agent = np.random.randint(self.agent_num)
         # summary_record = []
 
+        """训练过程"""
         while epoch < max_epochs:
+            # 调试用
+            if epoch == 100:
+                print("debug断点")
             print('epoch %s' % epoch)
             # if anomaly_edge and (epoch == anomaly_step):
             #     self.agents[anomaly_agent].movable = False
@@ -692,12 +748,12 @@ class MAACAgent(object):
                 self.env.render(env_log_dir, epoch, True)
                 # sensor_states.append(self.env.DS_state)
 
-            # 经过max_step后， 结束一个episode，更新经验池，重新开始
+            """经过max_step后， 结束一个episode，更新经验池，重新开始"""
             if steps >= max_step:
                 # self.env.world.finished_data = []
                 episode += 1
                 # self.env.reset()
-                for m in self.agent_memory.keys():
+                for m in self.agent_memory.keys():  # AC 中没有
                     del self.agent_memory[m][0:-self.batch_size * 2]  # self.batch_size = 128
                 del self.center_memory[0:-self.batch_size * 2]
                 print(
@@ -706,7 +762,7 @@ class MAACAgent(object):
 
                 with summary_writer.as_default():  # Summary： 所有需要在TensorBoard上展示的统计结果
                     tf.summary.scalar('Main/episode_reward', total_reward, step=episode)  # 添加标量统计结果
-                    tf.summary.scalar('Main/episode_steps', steps, step=episode)
+                    # tf.summary.scalar('Main/episode_steps', steps, step=episode)
                     # tf.summary.trace_export(name="model_trace", step=0, profiler_outdir=train_log_dir)
 
                 summary_writer.flush()
@@ -714,11 +770,13 @@ class MAACAgent(object):
                 steps = 0
                 total_reward = 0
 
-            cur_reward = self.actor_act(epoch)  # 获取当前reward
-            # print('episode-%s reward:%f' % (episode, cur_reward))
-            self.replay()       # 经验重放
-            finish_length.append(len(self.env.world.finished_data))     # 完成 数
-            finish_size.append(sum([data[0] for data in self.env.world.finished_data]))     # 完成 量
+            """执行action 及 经验重放"""
+            # cur_reward = self.actor_act(epoch)  # 获取当前reward
+            cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
+            print('episode-%s reward:%f' % (episode, cur_reward))
+            self.replay()  # 经验重放，更改网络参数
+            finish_length.append(len(self.env.world.finished_data))  # 完成 数     epoch时总计完成的，而不是每个epoch内完成的
+            finish_size.append(sum([data[0] for data in self.env.world.finished_data]))  # 完成 量
             sensor_ages.append(list(self.env.world.sensor_age.values()))
             # agent_pos.append([[agent.position[0], agent.position[1]] for agent in self.env.world.agents])
             # # print(agent_pos)
@@ -731,14 +789,14 @@ class MAACAgent(object):
             # exe, done = self.env.get_buffer_state()
             # exebuff.append(exe)
             # donebuff.append(done)
-
             # summary_record.append(self.summaries)
-            # 联合学习参数更新 以及 目标网络权重参数更新 update target
+
+            """联合学习参数更新 以及 目标网络权重参数更新 update target"""
             if epoch % up_freq == 1:
                 print('update targets, finished data: {}'.format(len(self.env.world.finished_data)))
 
                 # finish_length.append(len(self.env.world.finished_data))
-                if FL:      # 联合学习更新网络参数
+                if FL:  # 联合学习更新网络参数
                     merge_fl(self.agent_actors, FL_omega)
                     merge_fl(self.agent_critics, FL_omega)
                     # merge_fl(self.target_agent_actors, FL_omega)
@@ -753,22 +811,26 @@ class MAACAgent(object):
             steps += 1
             epoch += 1
 
-            # tensorboard 喂入需要监听的数据
+            """tensorboard 喂入需要监听的数据"""
             with summary_writer.as_default():
                 if len(self.center_memory) > self.batch_size:
-                    tf.summary.scalar('Loss/center_actor_loss', self.summaries['center-actor_loss'], step=epoch)  # 用来显示标量信息
+                    tf.summary.scalar('Loss/center_actor_loss', self.summaries['center-actor_loss'],
+                                      step=epoch)  # 用来显示标量信息
                     tf.summary.scalar('Loss/center_critic_loss', self.summaries['center-critic_loss'], step=epoch)
                     tf.summary.scalar('Loss/agent_actor_loss', self.summaries['agent0-actor_loss'], step=epoch)
                     tf.summary.scalar('Loss/agent_critic_loss', self.summaries['agent0-critic_loss'], step=epoch)
                     tf.summary.scalar('Stats/cq_val', self.summaries['cq_val'], step=epoch)
                     for acount in range(self.agent_num):
-                        tf.summary.scalar('Stats/agent%s_actor_loss' % acount, self.summaries['agent%s-actor_loss' % acount], step=epoch)
-                        tf.summary.scalar('Stats/agent%s_critic_loss' % acount, self.summaries['agent%s-critic_loss' % acount], step=epoch)
-                tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
+                        tf.summary.scalar('Stats/agent%s_actor_loss' % acount,
+                                          self.summaries['agent%s-actor_loss' % acount], step=epoch)
+                        tf.summary.scalar('Stats/agent%s_critic_loss' % acount,
+                                          self.summaries['agent%s-critic_loss' % acount], step=epoch)
+                # tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
+                tf.summary.scalar('Main/step_reward', cur_reward, step=epoch)
 
             summary_writer.flush()
 
-        # save final model
+        """save final model"""
         self.save_model(episode, cur_time)
         sio.savemat(record_dir + '/data.mat',
                     {'finish_len': finish_length,
@@ -793,14 +855,15 @@ class MAACAgent(object):
         # with open(record_dir + '/record.json', 'w') as f:
         #     json.dump(summary_record, f)
 
-        # 画出环境map gif
+        """画出环境map gif"""
         self.env.render(env_log_dir, epoch, True)
         img_paths = glob.glob(env_log_dir + '/*.png')
-        # linux和windows文件路径斜杠不同，注意区分
-        # linux 上运行
-        # img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
-        # 源代码 Windows上运行
-        img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
+        # linux(/)和windows(\)文件路径斜杠不同，注意区分
+        system = platform.system()  # 获取操作系统类型
+        if system == 'Windows':
+            img_paths.sort(key=lambda x: int(x.split('.')[0].split('\\')[-1]))
+        elif system == 'Linux':
+            img_paths.sort(key=lambda x: int(x.split('.')[0].split('/')[-1]))
 
         gif_images = []
         for path in img_paths:
