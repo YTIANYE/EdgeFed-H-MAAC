@@ -5,6 +5,10 @@
       <excludeFolder url="file://$MODULE_DIR$/logs_average" />
       <excludeFolder url="file://$MODULE_DIR$/logs_age" />
       <excludeFolder url="file://$MODULE_DIR$/logs_average_nearest_epoch" />
+      <excludeFolder url="file://$MODULE_DIR$/logs/env" />
+      <excludeFolder url="file://$MODULE_DIR$/logs/hyperparam" />
+      <excludeFolder url="file://$MODULE_DIR$/logs/models" />
+      <excludeFolder url="file://$MODULE_DIR$/logs/records" />
     </content>
     <orderEntry type="jdk" jdkName="Remote Python 3.8.5 (sftp://stu03@172.16.75.2:22/usr/local/anaconda3/bin/python3.8)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

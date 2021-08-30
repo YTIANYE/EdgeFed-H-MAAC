@@ -24,8 +24,9 @@ class AgentState(object):
 class EdgeDevice(object):
     edge_count = 0
 
-    def __init__(self, obs_r, pos, spd, collect_r, max_buffer_size, movable=True, mv_bt=0, trans_bt=0):  # pos(x,y,h)
-        self.no = EdgeDevice.edge_count
+    def __init__(self, i, obs_r, pos, spd, collect_r, max_buffer_size, movable=True, mv_bt=0, trans_bt=0):  # pos(x,y,h)
+        # self.no = EdgeDevice.edge_count
+        self.no = i     # agent 编号，取消静态变量编号方式
         EdgeDevice.edge_count += 1
         self.obs_r = obs_r  # 观察半径
         self.init_pos = pos  # 初始位置
@@ -165,8 +166,9 @@ def agent_com(agent_list):
 class Sensor(object):
     sensor_cnt = 0
 
-    def __init__(self, pos, data_rate, bandwidth, max_ds, lam=0.5, weight=1):
-        self.no = Sensor.sensor_cnt
+    def __init__(self, i, pos, data_rate, bandwidth, max_ds, lam=0.5, weight=1):
+        # self.no = Sensor.sensor_cnt
+        self.no = i
         Sensor.sensor_cnt += 1
         self.position = pos
         self.weight = weight
@@ -362,7 +364,7 @@ class MEC_world(object):
         #     [i for i in range(int(0.5 * self.map_size), int(0.9 * self.map_size))], k=int(sensor_num / 2)), random.choices([i for i in range(int(0.1 * self.map_size), int(0.9 * self.map_size))], k=sensor_num)]
         for i in range(sensor_num):
             self.sensors.append(
-                Sensor(np.array([self.sensor_pos[0][i], self.sensor_pos[1][i]]), data_gen_rate, sensor_bandwidth,
+                Sensor(i, np.array([self.sensor_pos[0][i], self.sensor_pos[1][i]]), data_gen_rate, sensor_bandwidth,
                        max_ds, lam=sensor_lam))
             self.sensor_age[i] = 0
             self.DS_map[self.sensor_pos[0][i], self.sensor_pos[1][i]] = 1
@@ -372,8 +374,10 @@ class MEC_world(object):
             random.sample([i for i in range(int(0.15 * self.map_size), int(0.85 * self.map_size))], agent_num)]
         for i in range(agent_num):
             self.agents.append(
-                EdgeDevice(self.obs_r, np.array([self.agent_pos_init[0][i], self.agent_pos_init[1][i]]), speed,
+                EdgeDevice(i, self.obs_r, np.array([self.agent_pos_init[0][i], self.agent_pos_init[1][i]]), speed,
                            collect_r, self.max_buffer_size))
+                # EdgeDevice(self.obs_r, np.array([self.agent_pos_init[0][i], self.agent_pos_init[1][i]]), speed,
+                #            collect_r, self.max_buffer_size))
 
     """一个step包含数据年龄更新，数据源生成新数据，edge agent 收集处理卸载数据"""
 
