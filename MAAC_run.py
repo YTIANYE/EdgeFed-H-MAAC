@@ -24,7 +24,8 @@ max_size = 5  # 收集数据和执行数据的最大缓冲区大小
 sensor_lam = 1e3  # 1000 # 泊松分布 lam-发生率或已知次数
 
 # 测试周期：经过大量实验实例观察一般2k个epoch开始趋于稳定，故实验周期设置为3k
-# MAX_EPOCH = 3000
+MAX_EPOCH = 3000
+MAX_EP_STEPS = 200
 # 大周期
 # MAX_EPOCH = 5000
 # MAX_EP_STEPS = 200
@@ -32,8 +33,8 @@ sensor_lam = 1e3  # 1000 # 泊松分布 lam-发生率或已知次数
 # MAX_EPOCH = 500
 # MAX_EP_STEPS = 20
 # 测试短周期
-MAX_EPOCH = 100
-MAX_EP_STEPS = 5
+# MAX_EPOCH = 100
+# MAX_EP_STEPS = 5
 LR_A = 0.001  # learning rate for actor
 LR_C = 0.002  # learning rate for critic
 GAMMA = 0.85  # reward discount
@@ -58,20 +59,16 @@ tf.random.set_seed(rand_seed)
 
 
 def run(sensor_num):
-    """选取GPU"""
-    print("TensorFlow version: ", tf.__version__)
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))  # 获得当前主机上特定运算设备的列表
-    plt.rcParams['figure.figsize'] = (9, 9)  # 设置figure_size尺寸
-    # logdir="logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
-    # logdir="logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-    # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
+    # 记录控制台日志
+    m_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    f_print_logs = open('logs/print_logs/%s.txt' % m_time, 'w')
 
     # 记录开始时间
     startTime = time.time()
     print("开始时间:", time.localtime(startTime))
+    print("开始时间:", time.localtime(startTime), file=f_print_logs)
 
+    # 记录环境参数
     params = {
         'map_size': map_size,
         'agent_num': agent_num,
@@ -102,31 +99,47 @@ def run(sensor_num):
         'FL': FL,
         'FL_omega': FL_omega
     }
+    m_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    f = open('logs/hyperparam/%s.json' % m_time, 'w')
+    json.dump(params, f)
+    f.close()
 
+    # 选取GPU
+    print("TensorFlow version: ", tf.__version__)
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))  # 获得当前主机上特定运算设备的列表
+    plt.rcParams['figure.figsize'] = (9, 9)  # 设置figure_size尺寸
+    # logdir="logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
+    # logdir="logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
+
+    """训练过程"""
     mec_world = mec_def.MEC_world(map_size, agent_num, sensor_num, obs_r, speed, collect_r, max_size, sensor_lam)
     # env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta)
     env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta, aggregate_reward=aggregate_reward)
     # 建立模型
     MAAC = MAAC_agent.MAACAgent(env, TAU, GAMMA, LR_A, LR_C, LR_A, LR_C, BATCH_SIZE, Epsilon)
-    # 记录环境参数
-    m_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    f = open('logs/hyperparam/%s.json' % m_time, 'w')
-    json.dump(params, f)
-    f.close()
     # 训练
     MAAC.train(MAX_EPOCH, MAX_EP_STEPS, up_freq=up_freq, render=True, render_freq=render_freq, FL=FL,
                FL_omega=FL_omega)
 
     # 统计执行时间
-    print("开始时间:", time.localtime(startTime))
     endTime = time.time()
-    print("结束时间:", time.localtime(endTime))
     t = endTime - startTime
-    print("运行时间：", t)
+    print("开始时间:", time.localtime(startTime))
+    print("结束时间:", time.localtime(endTime))
+    print("运行时间(分钟)：", t / 60)
+    print("开始时间:", time.localtime(startTime), file=f_print_logs)
+    print("结束时间:", time.localtime(endTime), file=f_print_logs)
+    print("运行时间(分钟)：", t / 60, file=f_print_logs)
+
+    # 关闭记录控制台日志
+    f_print_logs.close()
 
 
 if __name__ == "__main__":
-    sensor_nums = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
+    sensor_nums = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
     for i in range(len(sensor_nums)):
         print("sensor_num:", sensor_num)
         run(sensor_nums[i])
