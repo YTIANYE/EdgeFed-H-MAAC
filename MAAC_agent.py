@@ -14,6 +14,7 @@ import glob
 import tqdm
 import json
 import platform
+from MAAC_run import PRINT_LOGS
 
 # tf.random.set_seed(11)
 
@@ -743,7 +744,7 @@ class MAACAgent(object):
             # if anomaly_edge and (epoch == anomaly_step):
             #     self.agents[anomaly_agent].movable = False
 
-            # 每20个epoch保存一次环境map
+            """每20个epoch保存一次环境map"""
             if render and (epoch % 20 == 1):
                 self.env.render(env_log_dir, epoch, True)
                 # sensor_states.append(self.env.DS_state)
@@ -770,10 +771,17 @@ class MAACAgent(object):
                 steps = 0
                 total_reward = 0
 
-            """执行action 及 经验重放"""
-            # cur_reward = self.actor_act(epoch)  # 获取当前reward
+            """执行action"""
             cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
-            print('episode-%s reward:%f' % (episode, cur_reward))
+            # cur_reward = self.actor_act(epoch)  # 获取当前reward
+            print('epoch:%s reward:%f' % (epoch, cur_reward))
+            # print('episode-%s reward:%f' % (episode, cur_reward))
+            # 打印控制台日志
+            f_print_logs = PRINT_LOGS(cur_time).open()
+            print('epoch:%s reward:%f' % (epoch, cur_reward), file=f_print_logs)
+            f_print_logs.close()
+
+            """经验重放"""
             self.replay()  # 经验重放，更改网络参数
             finish_length.append(len(self.env.world.finished_data))  # 完成 数     epoch时总计完成的，而不是每个epoch内完成的
             finish_size.append(sum([data[0] for data in self.env.world.finished_data]))  # 完成 量

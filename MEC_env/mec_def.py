@@ -165,6 +165,8 @@ def agent_com(agent_list):
 # 数据源
 class Sensor(object):
     sensor_cnt = 0
+    data_buffer_max = 10    # 数据源缓冲区最大容量（data_buffer_max个小任务）
+    data_buffer_min = 2     # 数据源缓冲区至少2个小任务才能被收集
 
     def __init__(self, i, pos, data_rate, bandwidth, max_ds, lam=0.5, weight=1):
         # self.no = Sensor.sensor_cnt
@@ -196,7 +198,14 @@ class Sensor(object):
             return
         if new_data:
             self.data_buffer.append([new_data, 0, self.no])  # 数据大小， 年龄， 数据源编号
-            self.data_state = True  # 数据状态，数据源的缓冲区是否含有数据
+            self.data_state = True  # 数据状态，数据源的缓冲区是否含有数据，是否能被收集
+            # 缓冲区下限
+            # if len(self.data_buffer) >= 20:
+            #     self.data_state = True  # 数据状态，数据源的缓冲区是否含有数据，是否能被收集
+            # 缓冲区上限
+            # if len(self.data_buffer) > self.data_buffer_max:
+            #     self.data_buffer.pop(0)     # 去除旧数据
+
         # 生成数据设置了单个小任务的数据大小，但是数据源的数据缓存是无限的，edge收集单个数据源的数据量是无限的
 
 collecting_channel_param = {'suburban': (4.88, 0.43, 0.1, 21),

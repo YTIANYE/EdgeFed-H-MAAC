@@ -45,29 +45,50 @@ beta = 0.1  #
 aggregate_reward = False  # edge 是否共用sum_reward， 源码默认False
 # aggregate_reward = True
 Epsilon = 0.2  # Probability of random exploration      # Epsilon = 0.1  # Epsilon = 0.4  # Epsilon = 0.05
-# random seeds are fixed to reproduce the results
-map_seed = 1
-rand_seed = 17
 up_freq = 8  # 目标网络更新频率 每up_freq个epoch更新一次
 render_freq = 32
 FL = True  # 控制是否联合学习的开关，默认True
 # FL = False
 FL_omega = 0.5  # todo 关于联合学习因子其他情况还没有进行实验
+# random seeds are fixed to reproduce the results
+map_seed = 1
+rand_seed = 17
 np.random.seed(map_seed)
 random.seed(map_seed)
 tf.random.set_seed(rand_seed)
 
 
+# 记录控制台日志
+class PRINT_LOGS:
+    def __init__(self, m_time):
+        # m_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+        self.m_time = m_time
+
+    def open(self):
+        logs = open('logs/print_logs/%s.txt' % self.m_time, 'a')        # 'w'覆盖 'a'追加
+        return logs
+
+
 def run(sensor_num):
-    # 记录控制台日志
-    m_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    f_print_logs = open('logs/print_logs/%s.txt' % m_time, 'w')
 
-    # 记录开始时间
-    startTime = time.time()
-    print("开始时间:", time.localtime(startTime))
-    print("开始时间:", time.localtime(startTime), file=f_print_logs)
+    # 选取GPU
+    print("TensorFlow version: ", tf.__version__)
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))  # 获得当前主机上特定运算设备的列表
+    plt.rcParams['figure.figsize'] = (9, 9)  # 设置figure_size尺寸
+    # logdir="logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
+    # logdir="logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
+    """初始化"""
+    mec_world = mec_def.MEC_world(map_size, agent_num, sensor_num, obs_r, speed, collect_r, max_size, sensor_lam)
+    # env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta)
+    env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta, aggregate_reward=aggregate_reward)
+    # 建立模型
+    MAAC = MAAC_agent.MAACAgent(env, TAU, GAMMA, LR_A, LR_C, LR_A, LR_C, BATCH_SIZE, Epsilon)
+
+    """训练开始"""
     # 记录环境参数
     params = {
         'map_size': map_size,
@@ -104,23 +125,15 @@ def run(sensor_num):
     json.dump(params, f)
     f.close()
 
-    # 选取GPU
-    print("TensorFlow version: ", tf.__version__)
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))  # 获得当前主机上特定运算设备的列表
-    plt.rcParams['figure.figsize'] = (9, 9)  # 设置figure_size尺寸
-    # logdir="logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
-    # logdir="logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-    # tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
+    # 记录控制台日志
+    f_print_logs = PRINT_LOGS(m_time).open()
 
-    """训练过程"""
-    mec_world = mec_def.MEC_world(map_size, agent_num, sensor_num, obs_r, speed, collect_r, max_size, sensor_lam)
-    # env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta)
-    env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta, aggregate_reward=aggregate_reward)
-    # 建立模型
-    MAAC = MAAC_agent.MAACAgent(env, TAU, GAMMA, LR_A, LR_C, LR_A, LR_C, BATCH_SIZE, Epsilon)
-    # 训练
+    # 记录开始时间
+    startTime = time.time()
+    print("开始时间:", time.localtime(startTime))
+    print("开始时间:", time.localtime(startTime), file=f_print_logs)
+
+    # 训练过程
     MAAC.train(MAX_EPOCH, MAX_EP_STEPS, up_freq=up_freq, render=True, render_freq=render_freq, FL=FL,
                FL_omega=FL_omega)
 
@@ -139,7 +152,15 @@ def run(sensor_num):
 
 
 if __name__ == "__main__":
-    sensor_nums = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+    """实验运行"""
+    """变量：数据源"""
+    # sensor_nums = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+    # sample方式二
+    # sensor_nums = [50, 60, 70, 130]   # 30 20, 40, 80, 90, 100, 110, 120
+    sensor_nums = []    # 140
     for i in range(len(sensor_nums)):
         print("sensor_num:", sensor_num)
         run(sensor_nums[i])
+
+    """测试运行"""
+    # run(50)

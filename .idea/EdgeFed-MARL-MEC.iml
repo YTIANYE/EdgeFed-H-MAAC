@@ -5,11 +5,12 @@
       <excludeFolder url="file://$MODULE_DIR$/logs_average" />
       <excludeFolder url="file://$MODULE_DIR$/logs_age" />
       <excludeFolder url="file://$MODULE_DIR$/logs_average_nearest_epoch" />
-      <excludeFolder url="file://$MODULE_DIR$/logs/env" />
-      <excludeFolder url="file://$MODULE_DIR$/logs/hyperparam" />
-      <excludeFolder url="file://$MODULE_DIR$/logs/models" />
-      <excludeFolder url="file://$MODULE_DIR$/logs/records" />
-      <excludeFolder url="file://$MODULE_DIR$/logs/fit" />
+      <excludeFolder url="file://$MODULE_DIR$/logs_sample/env" />
+      <excludeFolder url="file://$MODULE_DIR$/logs_sample/hyperparam" />
+      <excludeFolder url="file://$MODULE_DIR$/logs_sample/models" />
+      <excludeFolder url="file://$MODULE_DIR$/logs_sample/records" />
+      <excludeFolder url="file://$MODULE_DIR$/logs_sample/fit" />
+      <excludeFolder url="file://$MODULE_DIR$/logs_sample" />
       <excludeFolder url="file://$MODULE_DIR$/logs" />
     </content>
     <orderEntry type="jdk" jdkName="Remote Python 3.8.5 (sftp://stu03@172.16.75.2:22/usr/local/anaconda3/bin/python3.8)" jdkType="Python SDK" />
