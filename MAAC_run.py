@@ -187,16 +187,16 @@ def experiment_2():
     定量：数据源个数 50
     变量：数据源缓冲区上限 data_buffer_max = 10 20 40 100 200
     """
-    # sensor_data_buffer_maxs = [20, 40, 100, 200]
-    # for sensor_data_buffer_max in sensor_data_buffer_maxs:
-    #     # 记录控制台日志
-    #     f_print_logs = PRINT_LOGS(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')).open()
-    #     print("sensor_data_buffer_max:", sensor_data_buffer_max)
-    #     print("sensor_data_buffer_max:", sensor_data_buffer_max, f_print_logs)
-    #     # 关闭记录控制台日志
-    #     f_print_logs.close()
-    #
-    #     run(sensor_data_buffer_max)
+    sensor_data_buffer_maxs = [20, 40, 100, 200]
+    for sensor_data_buffer_max in sensor_data_buffer_maxs:
+        # 记录控制台日志
+        f_print_logs = PRINT_LOGS(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')).open()
+        print("sensor_data_buffer_max:", sensor_data_buffer_max)
+        print("sensor_data_buffer_max:", sensor_data_buffer_max, f_print_logs)
+        # 关闭记录控制台日志
+        f_print_logs.close()
+
+        run(sensor_data_buffer_max)
 
 
 # 实验3
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     # experiment_1()
 
     # 实验2：研究上下限对reward趋势的影响
-    experiment_2()
+    # experiment_2()
 
     # 下一步计划
     # 测试reward方式四的情况，并且做上下限，
