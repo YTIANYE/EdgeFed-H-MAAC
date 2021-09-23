@@ -14,7 +14,7 @@ import glob
 import tqdm
 import json
 import platform
-from MAAC_run import PRINT_LOGS
+from print_logs import *
 
 # tf.random.set_seed(11)
 
@@ -417,8 +417,9 @@ class MAACAgent(object):
 
     """actor执行动作"""
 
-    # def actor_act(self, epoch):       # 注意epoch是从0开始的
-    def actor_act(self, epoch, finish_length):
+    # 方式四需要传入 finish_length
+    # def actor_act(self, epoch, finish_length):
+    def actor_act(self, epoch):  # 注意epoch是从0开始的
         tmp = random.random()
         if tmp >= self.epsilon and epoch >= 16:  # todo epoch >= 16 经验池已充满？
             # 边缘agent的动作    agent act
@@ -772,8 +773,9 @@ class MAACAgent(object):
                 total_reward = 0
 
             """执行action"""
-            cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
-            # cur_reward = self.actor_act(epoch)  # 获取当前reward
+            # reward 方式四需要传入 finish_length
+            # cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
+            cur_reward = self.actor_act(epoch)  # 获取当前reward
             print('epoch:%s reward:%f' % (epoch, cur_reward))
             # print('episode-%s reward:%f' % (episode, cur_reward))
             # 打印控制台日志

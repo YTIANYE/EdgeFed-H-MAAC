@@ -13,6 +13,7 @@ import glob
 import tqdm
 import json
 import platform
+from print_logs import *
 
 
 def get_center_state(env):
@@ -294,6 +295,7 @@ class ACAgent(object):
         # center replay
         if len(self.center_memory) < self.batch_size:
             return
+        # TODO sample方式可以改进
         center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
         sensor_map = np.vstack([sample[0][0] for sample in center_samples])
         total_buffer_list = np.vstack([sample[0][1] for sample in center_samples])
@@ -384,6 +386,14 @@ class ACAgent(object):
 
             cur_reward = self.actor_act(epoch)
             # print('episode-%s reward:%f' % (episode, cur_reward))
+            print('epoch:%s reward:%f' % (epoch, cur_reward))
+            # print('episode-%s reward:%f' % (episode, cur_reward))
+            # 打印控制台日志
+            f_print_logs = PRINT_LOGS(cur_time).open()
+            print('epoch:%s reward:%f' % (epoch, cur_reward), file=f_print_logs)
+            f_print_logs.close()
+
+            """经验重放"""
             self.replay()
             finish_length.append(len(self.env.world.finished_data))
             finish_size.append(sum([data[0] for data in self.env.world.finished_data]))

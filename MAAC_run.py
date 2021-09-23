@@ -11,12 +11,13 @@ import MAAC_agent
 from matplotlib import pyplot as plt
 import json
 import time
+from print_logs import *
 
 map_size = 200
 # agent_num = 4
 # sensor_num = 30
 agent_num = 8
-sensor_num = 60  # sensor_num = 20 30 40 50 60 70 80 90 100 110 120
+sensor_num = 60
 obs_r = 60  # 观察半径
 collect_r = 40  # 收集覆盖半径
 speed = 6  # 移动半径
@@ -57,25 +58,13 @@ np.random.seed(map_seed)
 random.seed(map_seed)
 tf.random.set_seed(rand_seed)
 
-
-# 记录控制台日志
-class PRINT_LOGS:
-    def __init__(self, m_time):
-        # m_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-        self.m_time = m_time
-
-    def open(self):
-        logs = open('logs/print_logs/%s.txt' % self.m_time, 'a')  # 'w'覆盖 'a'追加
-        return logs
-
-
 """运行"""
 
 
-# 传入数据源个数
-# def run(sensor_num):
 # 传入数据源缓冲区上限
-def run(sensor_data_buffer_max):
+# def run(sensor_data_buffer_max):
+# 传入数据源个数
+def run(sensor_num):
     # 选取GPU
     print("TensorFlow version: ", tf.__version__)
     # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -166,8 +155,11 @@ def experiment_1():
     """
     # 可能是添加上限的实验或只是sample方式二
     # sensor_nums = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+
     # sample方式二
-    sensor_nums = [50, 60, 70, 130, 30, 20, 40, 80, 90, 100, 110, 120]  # 140
+    # sensor_nums = [50, 60, 70, 130, 30, 20, 40, 80, 90, 100, 110, 120]  # 140
+    # sensor_nums = [60, 60, 60, 60, 50, 50, 50, 50]
+    sensor_nums = [60, 60, 60, 60, 60]
     for i in range(len(sensor_nums)):
         print("sensor_num:", sensor_num)
         run(sensor_nums[i])
@@ -204,7 +196,7 @@ def experiment_2():
 if __name__ == "__main__":
     """实验运行"""
     # 实验1：研究数据源个数对reward趋势的影响
-    # experiment_1()
+    experiment_1()
 
     # 实验2：研究上下限对reward趋势的影响
     # experiment_2()

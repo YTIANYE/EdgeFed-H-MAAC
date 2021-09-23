@@ -11,9 +11,13 @@
       <excludeFolder url="file://$MODULE_DIR$/logs_sample/records" />
       <excludeFolder url="file://$MODULE_DIR$/logs_sample/fit" />
       <excludeFolder url="file://$MODULE_DIR$/logs_sample" />
-      <excludeFolder url="file://$MODULE_DIR$/logs_sample2" />
+      <excludeFolder url="file://$MODULE_DIR$/logs" />
       <excludeFolder url="file://$MODULE_DIR$/logs_buffer" />
       <excludeFolder url="file://$MODULE_DIR$/logs_buffer/logsTest" />
+      <excludeFolder url="file://$MODULE_DIR$/logsTest" />
+      <excludeFolder url="file://$MODULE_DIR$/logs_average_AC" />
+      <excludeFolder url="file://$MODULE_DIR$/logs_templete" />
+      <excludeFolder url="file://$MODULE_DIR$/logs_sample2" />
     </content>
     <orderEntry type="jdk" jdkName="Remote Python 3.8.5 (sftp://stu03@172.16.75.2:22/usr/local/anaconda3/bin/python3.8)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
