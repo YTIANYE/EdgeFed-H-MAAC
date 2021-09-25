@@ -150,6 +150,7 @@ def run(sensor_num):
 # 实验1：研究数据源个数对reward趋势的影响
 def experiment_1():
     """
+    研究总平均任务数
     sample方式二
     变量：数据源个数
     """
@@ -159,7 +160,18 @@ def experiment_1():
     # sample方式二
     # sensor_nums = [50, 60, 70, 130, 30, 20, 40, 80, 90, 100, 110, 120]  # 140
     # sensor_nums = [60, 60, 60, 60, 50, 50, 50, 50]
-    sensor_nums = [60, 60, 60, 60, 60]
+    # sensor_nums = [60, 60, 60, 60, 60]
+
+    """
+    研究最近平均任务数
+    sample方式二
+    变量：数据源个数
+    """
+    # FL = True
+    # sensor_nums = [60, 60, 60, 60, 60, 60, 60, 60, 60, 60]      # 最近200 epoch_num = 200
+
+    # FL = False
+    # sensor_nums = [60, 60, 60, 60, 60, 60, 60, 60, 60, 60]      # 最近200 epoch_num = 200
     for i in range(len(sensor_nums)):
         print("sensor_num:", sensor_num)
         run(sensor_nums[i])
@@ -191,9 +203,7 @@ def experiment_2():
         run(sensor_data_buffer_max)
 
 
-# 实验3
-
-if __name__ == "__main__":
+def MAAC_run():
     """实验运行"""
     # 实验1：研究数据源个数对reward趋势的影响
     experiment_1()

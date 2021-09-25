@@ -24,7 +24,8 @@ speed = 6
 max_size = 5
 sensor_lam = 1e3
 
-MAX_EPOCH = 5000
+# MAX_EPOCH = 5000
+MAX_EPOCH = 3000
 MAX_EP_STEPS = 200
 LR_A = 0.001  # learning rate for actor
 LR_C = 0.002  # learning rate for critic
@@ -126,20 +127,30 @@ def experiment_1():
     """
     # sensor_nums = [60, 50, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
     # sensor_nums = [50, 50, 50, 50, 60, 60, 60, 60]
-    sensor_nums = [50, 50, 50, 50, 50, 60, 60, 60, 60, 60]
+    # sensor_nums = [50, 50, 50, 50, 50, 60, 60, 60, 60, 60]
+    # for i in range(len(sensor_nums)):
+    #     print("sensor_num:", sensor_num)
+    #     run(sensor_nums[i])
+
+    """
+    研究最近平均任务数
+    sample方式二
+    变量：数据源个数
+    """
+    # sensor_nums = [60, 60, 60, 60, 60]  # 最近200 epoch_num = 200
+    sensor_nums = [60, 60, 60, 60]  # 最近200 epoch_num = 200
     for i in range(len(sensor_nums)):
         print("sensor_num:", sensor_num)
         run(sensor_nums[i])
 
 
-if __name__ == "__main__":
+def AC_run():
     """实验运行"""
     # 实验1：研究数据源个数对reward趋势的影响
     experiment_1()
 
     """测试运行"""
     # run(60)
-    # run(50)
 
 """下一步计划"""
 

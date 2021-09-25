@@ -209,7 +209,10 @@ class ACAgent(object):
         keras.utils.plot_model(self.center_actor, 'logs/model_figs/baseline_actor.png', show_shapes=True)
         keras.utils.plot_model(self.center_critic, 'logs/model_figs/baseline_critic.png', show_shapes=True)
 
-    def actor_act(self, epoch):
+    """actor执行动作"""
+    # def actor_act(self, epoch):
+    # 方式四需要传入 finish_length
+    def actor_act(self, epoch, finish_length):
         tmp = random.random()
         if tmp >= self.epsilon and epoch >= 16:
             # agent act
@@ -255,10 +258,21 @@ class ACAgent(object):
                 # move_softmax = tf.expand_dims(move, axis=0)
                 agent_act_list.append([move, execution, offloading])
 
+            """reward 和 经过预测后得到的结果"""
             new_state_map, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            # TODO reward 修改
             # reward 第三种形式需要对new_rewards进行一下处理
-            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
-            # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
+            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+
+            # 方式四：最近epoch_num个epoch的平均完成任务数     对方式三的reward进行覆盖
+            epoch_num = 200  # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
+            if epoch > epoch_num:  # 最近64个epoch平均每个epoch完成的任务数
+                new_reward = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            else:
+                new_reward = finish_length[-1] / epoch
+            new_rewards = [new_reward for reward in new_rewards]
+
+
             new_sensor_map, agent_map = self.env.get_statemap()
             new_total_buffer_list, new_done_buffer_list, new_pos_list = get_center_state(self.env)
             new_total_buffer_list = tf.expand_dims(new_total_buffer_list, axis=0)
@@ -284,9 +298,16 @@ class ACAgent(object):
             new_bandvec = np.random.rand(self.agent_num)
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            # TODO reward 修改
             # reward 第三种形式需要对new_rewards进行一下处理
-            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
-            # new_rewards = [(8 - reward / (epoch + 1)) for reward in new_rewards]
+            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+
+            # 方式四：最近n个epoch的平均完成任务数，    需要对方式三的reward进行覆盖
+            if epoch == 0:
+                new_reward = 0
+            else:
+                new_reward = finish_length[-1] / epoch  # 前16个都是平均值作为reward
+            new_rewards = [new_reward for reward in new_rewards]
 
         return new_rewards[-1]
 
@@ -384,8 +405,10 @@ class ACAgent(object):
                 steps = 0
                 total_reward = 0
 
-            cur_reward = self.actor_act(epoch)
-            # print('episode-%s reward:%f' % (episode, cur_reward))
+            """执行action"""
+            # reward 方式四需要传入 finish_length
+            cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
+            # cur_reward = self.actor_act(epoch)
             print('epoch:%s reward:%f' % (epoch, cur_reward))
             # print('episode-%s reward:%f' % (episode, cur_reward))
             # 打印控制台日志

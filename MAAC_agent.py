@@ -416,10 +416,9 @@ class MAACAgent(object):
         keras.utils.plot_model(self.agent_critics[0], 'logs/model_figs/new_agent_critic.png', show_shapes=True)
 
     """actor执行动作"""
-
+    # def actor_act(self, epoch):  # 注意epoch是从0开始的
     # 方式四需要传入 finish_length
-    # def actor_act(self, epoch, finish_length):
-    def actor_act(self, epoch):  # 注意epoch是从0开始的
+    def actor_act(self, epoch, finish_length):
         tmp = random.random()
         if tmp >= self.epsilon and epoch >= 16:  # todo epoch >= 16 经验池已充满？
             # 边缘agent的动作    agent act
@@ -484,15 +483,15 @@ class MAACAgent(object):
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
             # TODO reward 修改
             # 方式三：需要对new_rewards进行一下处理,修改reward时注意一起修改
-            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
 
             # 方式四：最近epoch_num个epoch的平均完成任务数     对方式三的reward进行覆盖
-            # epoch_num = 200 # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
-            # if epoch > epoch_num:                 # 最近64个epoch平均每个epoch完成的任务数
-            #     new_reward = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
-            # else:
-            #     new_reward = finish_length[-1] / epoch
-            # new_rewards = [new_reward for reward in new_rewards]
+            epoch_num = 200 # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
+            if epoch > epoch_num:                 # 最近64个epoch平均每个epoch完成的任务数
+                new_reward = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            else:
+                new_reward = finish_length[-1] / epoch
+            new_rewards = [new_reward for reward in new_rewards]
 
             new_done_buffer_list, new_pos_list = self.env.get_center_state()
             new_done_buffer_list = tf.expand_dims(new_done_buffer_list, axis=0)
@@ -540,14 +539,15 @@ class MAACAgent(object):
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
             # TODO reward 修改
-            new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # 方式三：需要对new_rewards进行一下处理,修改reward时注意一起修改
+            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
 
             # 方式四：最近n个epoch的平均完成任务数，    需要对方式三的reward进行覆盖
-            # if epoch == 0:
-            #     new_reward = 0
-            # else:
-            #     new_reward = finish_length[-1] / epoch      # 前16个都是平均值作为reward
-            # new_rewards = [new_reward for reward in new_rewards]
+            if epoch == 0:
+                new_reward = 0
+            else:
+                new_reward = finish_length[-1] / epoch      # 前16个都是平均值作为reward
+            new_rewards = [new_reward for reward in new_rewards]
 
         return new_rewards[-1]  # 四个reward的值都是一样的，所以返回其中之一即可
 
@@ -774,8 +774,8 @@ class MAACAgent(object):
 
             """执行action"""
             # reward 方式四需要传入 finish_length
-            # cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
-            cur_reward = self.actor_act(epoch)  # 获取当前reward
+            cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
+            # cur_reward = self.actor_act(epoch)  # 获取当前reward
             print('epoch:%s reward:%f' % (epoch, cur_reward))
             # print('episode-%s reward:%f' % (episode, cur_reward))
             # 打印控制台日志
