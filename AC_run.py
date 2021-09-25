@@ -1,50 +1,20 @@
 import gym
 import numpy as np
 import random
+
 from MEC_env import mec_def
 from MEC_env import mec_env
+from Params import *
+import AC_agent
+
 import tensorflow as tf
 from tensorflow import keras
 import tensorboard
 import datetime
-import AC_agent
 from matplotlib import pyplot as plt
 import json
 import time
 from print_logs import *
-
-map_size = 200
-# agent_num = 4
-# sensor_num = 30
-agent_num = 8
-sensor_num = 60
-obs_r = 60
-collect_r = 40
-speed = 6
-max_size = 5
-sensor_lam = 1e3
-
-# MAX_EPOCH = 5000
-MAX_EPOCH = 3000
-MAX_EP_STEPS = 200
-LR_A = 0.001  # learning rate for actor
-LR_C = 0.002  # learning rate for critic
-GAMMA = 0.85  # reward discount
-TAU = 0.8  # soft replacement
-BATCH_SIZE = 128
-alpha = 0.9
-beta = 0.1
-Epsilon = 0.2
-# random seeds are fixed to reproduce the results
-map_seed = 1
-rand_seed = 17
-up_freq = 8
-render_freq = 32
-np.random.seed(map_seed)
-random.seed(map_seed)
-tf.random.set_seed(rand_seed)   # TODO 随机种子的位置有没有问题
-
-"""运行"""
 
 
 # 传入数据源个数
@@ -64,31 +34,6 @@ def run(sensor_num):
 
     """训练开始"""
     # 记录环境参数
-    params = {
-        'map_size': map_size,
-        'agent_num': agent_num,
-        'sensor_num': sensor_num,
-        'obs_r': obs_r,
-        'collect_r': collect_r,
-        'speed': speed,
-        'max_size': max_size,
-        'sensor_lam': sensor_lam,
-
-        'MAX_EPOCH': MAX_EPOCH,
-        'MAX_EP_STEPS': MAX_EP_STEPS,
-        'LR_A': LR_A,
-        'LR_C': LR_C,
-        'GAMMA': GAMMA,
-        'TAU': TAU,
-        'BATCH_SIZE': BATCH_SIZE,
-        # 'alpha': alpha,
-        # 'beta': beta,
-        'Epsilon': Epsilon,
-        'learning_seed': rand_seed,
-        'env_seed': map_seed,
-        'up_freq': up_freq,
-        'render_freq': render_freq
-    }
     m_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
     f = open('logs/hyperparam/%s.json' % m_time, 'w')
     json.dump(params, f)
@@ -145,12 +90,15 @@ def experiment_1():
 
 
 def AC_run():
+    print("运行程序：AC_run")
+
     """实验运行"""
     # 实验1：研究数据源个数对reward趋势的影响
-    experiment_1()
+    # experiment_1()
 
     """测试运行"""
-    # run(60)
+    run(60)
+
 
 """下一步计划"""
 
