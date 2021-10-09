@@ -1,17 +1,19 @@
 from MEC_env import mec_def
 from MEC_env import mec_env
 from Params import *
+from print_logs import *
 import MAAC_agent
 
 import tensorflow as tf
-import datetime
 
+import datetime
 from matplotlib import pyplot as plt
 import json
 import time
-from print_logs import *
 
 FL = False
+
+
 # params['FL'] = FL
 
 
@@ -19,6 +21,10 @@ FL = False
 # def run(sensor_data_buffer_max):
 # 传入数据源个数
 def run(sensor_num):
+    np.random.seed(map_seed)
+    random.seed(map_seed)
+    tf.random.set_seed(rand_seed)
+
     # 选取GPU
     print("TensorFlow version: ", tf.__version__)
     # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -47,6 +53,8 @@ def run(sensor_num):
 
     # 记录控制台日志
     f_print_logs = PRINT_LOGS(m_time).open()
+    print("运行程序：MAAC_run")
+    print("运行程序：MAAC_run", file=f_print_logs)
 
     # 记录开始时间
     startTime = time.time()
@@ -124,6 +132,17 @@ def experiment_2():
         run(sensor_data_buffer_max)
 
 
+# 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
+def experiment_3():
+    """
+    变量：数据源个数
+    """
+    sensor_nums = [60, 60, 60, 60, 60]
+    for i in range(len(sensor_nums)):
+        print("sensor_num:", sensor_nums[i])
+        run(sensor_nums[i])
+
+
 def MAAC_run():
     print("运行程序：MAAC_run")
 
@@ -138,5 +157,12 @@ def MAAC_run():
     # 测试reward方式四的情况，并且做上下限，
     # reward的有没有明显提高，根据设限之后的reward增长趋势，应该会提高并且平稳
 
+    # 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
+    # experiment_3()
+
     """测试运行"""
+    run(60)
+    run(60)
+    run(60)
+    run(60)
     run(60)

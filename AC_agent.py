@@ -13,6 +13,8 @@ import glob
 import tqdm
 import json
 import platform
+
+from Params import *
 from print_logs import *
 
 
@@ -37,7 +39,7 @@ def discrete_circle_sample_count(n):
     count = 0
     move_dict = {}
     for x in range(-n, n + 1):
-        y_l = int(np.floor(np.sqrt(n**2 - x**2)))
+        y_l = int(np.floor(np.sqrt(n ** 2 - x ** 2)))
         for y in range(-y_l, y_l + 1):
             move_dict[count] = np.array([y, x])
             count += 1
@@ -85,7 +87,8 @@ def center_actor(input_dim_list, cnn_kernel_size, move_r, kernel_num):
     # bandwidth_out = bandwidth_out / tf.reduce_sum(bandwidth_out, 1, keepdims=True)
     # bandwidth_out = bandwidth_out / tf.expand_dims(tf.reduce_sum(bandwidth_out, 1), axis=-1)
 
-    model = keras.Model(inputs=[sensor_map, total_buffer_list, done_buffer_list, pos_list], outputs=[move_out, exe_op, off_op, bandwidth_out], name='center_actor_net')
+    model = keras.Model(inputs=[sensor_map, total_buffer_list, done_buffer_list, pos_list],
+                        outputs=[move_out, exe_op, off_op, bandwidth_out], name='center_actor_net')
     return model
 
 
@@ -134,10 +137,13 @@ def center_critic(input_dim_list, cnn_kernel_size):
     # bandvec
     # band_in = layers.Dense(2, activation='relu')(bandwidth_vec)
 
-    r_out = layers.concatenate([cnn_map, total_buffer_state, buffer_state, pos, move_mlp, exe_mlp, off_mlp, bandwidth_vec])
+    r_out = layers.concatenate(
+        [cnn_map, total_buffer_state, buffer_state, pos, move_mlp, exe_mlp, off_mlp, bandwidth_vec])
     # r_out = layers.AlphaDropout(0.2)(r_out)
     r_out = layers.Dense(1, activation='relu')(r_out)
-    model = keras.Model(inputs=[sensor_map, total_buffer_list, done_buffer_list, pos_list, move, exe_op, off_op, bandwidth_vec], outputs=r_out, name='center_critic_net')
+    model = keras.Model(
+        inputs=[sensor_map, total_buffer_list, done_buffer_list, pos_list, move, exe_op, off_op, bandwidth_vec],
+        outputs=r_out, name='center_critic_net')
     return model
 
 
@@ -190,15 +196,21 @@ class ACAgent(object):
         self.sample_prop = 1 / 4
 
         # net init
-        self.center_actor = center_actor([self.sensor_map_shape, self.buffer_list_shape, self.buffer_list_shape, self.pos_list_shape], self.cnn_kernel_size, self.env.move_r, self.agent_num)
-        self.center_critic = center_critic([self.sensor_map_shape, self.buffer_list_shape, self.buffer_list_shape, self.pos_list_shape,
-                                            self.movemap_shape, self.op_shape, self.op_shape, self.bandvec_shape], self.cnn_kernel_size)
+        self.center_actor = center_actor(
+            [self.sensor_map_shape, self.buffer_list_shape, self.buffer_list_shape, self.pos_list_shape],
+            self.cnn_kernel_size, self.env.move_r, self.agent_num)
+        self.center_critic = center_critic(
+            [self.sensor_map_shape, self.buffer_list_shape, self.buffer_list_shape, self.pos_list_shape,
+             self.movemap_shape, self.op_shape, self.op_shape, self.bandvec_shape], self.cnn_kernel_size)
 
-        self.target_center_actor = center_actor([self.sensor_map_shape, self.buffer_list_shape, self.buffer_list_shape, self.pos_list_shape], self.cnn_kernel_size, self.env.move_r, self.agent_num)
+        self.target_center_actor = center_actor(
+            [self.sensor_map_shape, self.buffer_list_shape, self.buffer_list_shape, self.pos_list_shape],
+            self.cnn_kernel_size, self.env.move_r, self.agent_num)
 
         update_target_net(self.center_actor, self.target_center_actor, tau=0)
-        self.target_center_critic = center_critic([self.sensor_map_shape, self.buffer_list_shape, self.buffer_list_shape, self.pos_list_shape,
-                                                   self.movemap_shape, self.op_shape, self.op_shape, self.bandvec_shape], self.cnn_kernel_size)
+        self.target_center_critic = center_critic(
+            [self.sensor_map_shape, self.buffer_list_shape, self.buffer_list_shape, self.pos_list_shape,
+             self.movemap_shape, self.op_shape, self.op_shape, self.bandvec_shape], self.cnn_kernel_size)
         update_target_net(self.center_critic, self.target_center_critic, tau=0)
 
         self.center_actor_opt = keras.optimizers.Adam(learning_rate=lr_ca)
@@ -210,6 +222,7 @@ class ACAgent(object):
         keras.utils.plot_model(self.center_critic, 'logs/model_figs/baseline_critic.png', show_shapes=True)
 
     """actor执行动作"""
+
     # def actor_act(self, epoch):
     # 方式四需要传入 finish_length
     def actor_act(self, epoch, finish_length):
@@ -259,20 +272,30 @@ class ACAgent(object):
                 agent_act_list.append([move, execution, offloading])
 
             """reward 和 经过预测后得到的结果"""
-            new_state_map, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
-            # TODO reward 修改
-            # reward 第三种形式需要对new_rewards进行一下处理
-            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # 单一目标
+            # new_state_map, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            # # TODO reward 修改
+            # # reward 第三种形式需要对new_rewards进行一下处理
+            # # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            #
+            # # 方式四：最近epoch_num个epoch的平均完成任务数     对方式三的reward进行覆盖
+            # if epoch > epoch_num:  # 最近64个epoch平均每个epoch完成的任务数
+            #     new_reward = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            # else:
+            #     new_reward = finish_length[-1] / epoch
+            # new_rewards = [new_reward for reward in new_rewards]
 
+            # 多目标
+            new_state_map, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list, new_bandvec)
             # 方式四：最近epoch_num个epoch的平均完成任务数     对方式三的reward进行覆盖
-            epoch_num = 200  # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
             if epoch > epoch_num:  # 最近64个epoch平均每个epoch完成的任务数
-                new_reward = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+                new_reward_average = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
             else:
-                new_reward = finish_length[-1] / epoch
-            new_rewards = [new_reward for reward in new_rewards]
-
-
+                new_reward_average = finish_length[-1] / epoch
+            new_rewards_average = [new_reward_average for reward in new_rewards_average]
+            # new_rewards方式三        [不同weight_age下的new_rewards比较，由于1 * weight_age 的不同，不能直接用来比较]
+            new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
+                           range(len(new_rewards_average))]
             new_sensor_map, agent_map = self.env.get_statemap()
             new_total_buffer_list, new_done_buffer_list, new_pos_list = get_center_state(self.env)
             new_total_buffer_list = tf.expand_dims(new_total_buffer_list, axis=0)
@@ -280,8 +303,9 @@ class ACAgent(object):
             new_pos_list = tf.expand_dims(new_pos_list, axis=0)
 
             # record memory
-            self.center_memory.append([[sensor_map, total_buffer_list, done_buffer_list, pos_list], action, new_rewards[-1],
-                                       [new_sensor_map, new_total_buffer_list, new_done_buffer_list, new_pos_list]])
+            self.center_memory.append(      # 经验池里放的reward可不可以分着放
+                [[sensor_map, total_buffer_list, done_buffer_list, pos_list], action, new_rewards[-1],
+                 [new_sensor_map, new_total_buffer_list, new_done_buffer_list, new_pos_list]])
 
         else:
             # random action
@@ -297,27 +321,48 @@ class ACAgent(object):
             # center
             new_bandvec = np.random.rand(self.agent_num)
             new_bandvec = new_bandvec / np.sum(new_bandvec)
-            new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
-            # TODO reward 修改
-            # reward 第三种形式需要对new_rewards进行一下处理
-            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            "reward"
+            # 单目标
+            # new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            # # TODO reward 修改
+            # # reward 第三种形式需要对new_rewards进行一下处理
+            # # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            #
+            # # 方式四：最近n个epoch的平均完成任务数，    需要对方式三的reward进行覆盖
+            # if epoch == 0:
+            #     new_reward = 0
+            # else:
+            #     new_reward = finish_length[-1] / epoch  # 前16个都是平均值作为reward
+            # new_rewards = [new_reward for reward in new_rewards]
 
-            # 方式四：最近n个epoch的平均完成任务数，    需要对方式三的reward进行覆盖
+            # 多目标
+            new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
+                                                                                             new_bandvec)
             if epoch == 0:
-                new_reward = 0
+                new_reward_average = 0
             else:
-                new_reward = finish_length[-1] / epoch  # 前16个都是平均值作为reward
-            new_rewards = [new_reward for reward in new_rewards]
+                new_reward_average = finish_length[-1] / epoch  # 前16个都是平均值作为reward
+            new_rewards_average = [new_reward_average for reward in new_rewards_average]
+            # new_rewards方式三
+            new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
+                           range(len(new_rewards_average))]
 
-        return new_rewards[-1]
+        # return new_rewards[-1]
+        return new_rewards[-1], new_rewards_age[-1], new_rewards_average[-1]  # new_rewards[-1]四个reward的值都是一样的，所以返回其中之一即可
 
     # @tf.function(experimental_relax_shapes=True)
     def replay(self):
         # center replay
         if len(self.center_memory) < self.batch_size:
             return
-        # TODO sample方式可以改进
-        center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
+        # # 方式一：原sample方式
+        # center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+        #     self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
+        # 方式二：改后的sample方式
+        center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+            self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
+            int(self.batch_size * (1 - self.sample_prop)))
+        """获取sample中的信息"""
         sensor_map = np.vstack([sample[0][0] for sample in center_samples])
         total_buffer_list = np.vstack([sample[0][1] for sample in center_samples])
         done_buffer_list = np.vstack([sample[0][2] for sample in center_samples])
@@ -329,22 +374,25 @@ class ACAgent(object):
         off = np.vstack([sample[1][2] for sample in center_samples])
         band_act = np.vstack([sample[1][3] for sample in center_samples])
         c_reward = tf.expand_dims([sample[2] for sample in center_samples], axis=-1)
-        # new states
+        """new states"""
         new_sensor_map = np.stack([sample[3][0] for sample in center_samples], axis=0)
         new_total_buffer_list = np.vstack([sample[3][1] for sample in center_samples])
         new_done_buffer_list = np.vstack([sample[3][2] for sample in center_samples])
         new_pos_list = np.vstack([sample[3][3] for sample in center_samples])
-        # next actions & reward
-        new_c_actions = self.target_center_actor.predict([new_sensor_map, new_total_buffer_list, new_done_buffer_list, new_pos_list])
-        cq_future = self.target_center_critic.predict([new_sensor_map, new_total_buffer_list, new_done_buffer_list, new_pos_list,
-                                                       new_c_actions[0], new_c_actions[1], new_c_actions[2], new_c_actions[3]])
+        """next actions & reward"""
+        new_c_actions = self.target_center_actor.predict(
+            [new_sensor_map, new_total_buffer_list, new_done_buffer_list, new_pos_list])
+        cq_future = self.target_center_critic.predict(
+            [new_sensor_map, new_total_buffer_list, new_done_buffer_list, new_pos_list,
+             new_c_actions[0], new_c_actions[1], new_c_actions[2], new_c_actions[3]])
         c_target_qs = c_reward + cq_future * self.gamma
         self.summaries['cq_val'] = np.average(c_reward[0])
 
         # train center critic
         with tf.GradientTape() as tape:
             tape.watch(self.center_critic.trainable_variables)
-            cq_values = self.center_critic([sensor_map, total_buffer_list, done_buffer_list, pos_list, move, exe, off, band_act])
+            cq_values = self.center_critic(
+                [sensor_map, total_buffer_list, done_buffer_list, pos_list, move, exe, off, band_act])
             cc_loss = tf.reduce_mean(tf.math.square(cq_values - tf.cast(c_target_qs, dtype=tf.float32)))
             # cc_loss = tf.reduce_mean(tf.math.square(cq_values - c_target_qs))
         cc_grad = tape.gradient(cc_loss, self.center_critic.trainable_variables)
@@ -353,7 +401,8 @@ class ACAgent(object):
         with tf.GradientTape() as tape:
             tape.watch(self.center_actor.trainable_variables)
             c_act = self.center_actor([sensor_map, total_buffer_list, done_buffer_list, pos_list])
-            ca_loss = tf.reduce_mean(self.center_critic([sensor_map, total_buffer_list, done_buffer_list, pos_list, c_act[0], c_act[1], c_act[2], c_act[3]]))
+            ca_loss = tf.reduce_mean(self.center_critic(
+                [sensor_map, total_buffer_list, done_buffer_list, pos_list, c_act[0], c_act[1], c_act[2], c_act[3]]))
         # print(self.center_critic([sensor_maps, agent_maps, c_act]))
         ca_grad = tape.gradient(ca_loss, self.center_actor.trainable_variables)
         # print(ca_grad)
@@ -378,6 +427,7 @@ class ACAgent(object):
         # tf.summary.trace_on(graph=True, profiler=True)
         os.makedirs('logs/models/' + cur_time)
         done, episode, steps, epoch, total_reward = False, 0, 0, 0, 0
+        total_reward_age, total_reward_average = 0, 0
         finish_length = []
         finish_size = []
         sensor_ages = []
@@ -393,27 +443,34 @@ class ACAgent(object):
                 episode += 1
                 # self.env.reset()
                 del self.center_memory[0:-self.batch_size * 2]
-                print('episode {}: {} total reward, {} steps, {} epochs'.format(episode, total_reward / steps, steps, epoch))
+                print('episode {}: {} total reward, {} steps, {} epochs'.format(episode, total_reward / steps, steps,
+                                                                                epoch))
 
                 with summary_writer.as_default():
                     tf.summary.scalar('Main/episode_reward', total_reward, step=episode)
-                    tf.summary.scalar('Main/episode_steps', steps, step=episode)
+                    tf.summary.scalar('Main/episode_reward_age', total_reward_age, step=episode)  # 添加标量统计结果
+                    tf.summary.scalar('Main/episode_reward_average', total_reward_average, step=episode)  # 添加标量统计结果
+                    # tf.summary.scalar('Main/episode_steps', steps, step=episode)
                     # tf.summary.trace_export(name="model_trace", step=0, profiler_outdir=train_log_dir)
 
                 summary_writer.flush()
                 self.save_model(episode, cur_time)
                 steps = 0
-                total_reward = 0
+                total_reward, total_reward_age, total_reward_average = 0, 0, 0
 
             """执行action"""
             # reward 方式四需要传入 finish_length
-            cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
+            cur_reward, cur_reward_age, cur_reward_average = self.actor_act(epoch, finish_length)  # 获取当前总reward、平均年龄、平均任务数
+            # cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
             # cur_reward = self.actor_act(epoch)
             print('epoch:%s reward:%f' % (epoch, cur_reward))
-            # print('episode-%s reward:%f' % (episode, cur_reward))
+            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
+            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
             # 打印控制台日志
             f_print_logs = PRINT_LOGS(cur_time).open()
             print('epoch:%s reward:%f' % (epoch, cur_reward), file=f_print_logs)
+            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age), file=f_print_logs)
+            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average), file=f_print_logs)
             f_print_logs.close()
 
             """经验重放"""
@@ -431,6 +488,8 @@ class ACAgent(object):
                 update_target_net(self.center_critic, self.target_center_critic, self.tau)
 
             total_reward += cur_reward
+            total_reward_age += cur_reward_age
+            total_reward_average += cur_reward_average
             steps += 1
             epoch += 1
 
@@ -442,16 +501,19 @@ class ACAgent(object):
                     tf.summary.scalar('Stats/cq_val', self.summaries['cq_val'], step=epoch)
                 # tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
                 tf.summary.scalar('Main/step_reward', cur_reward, step=epoch)
+                tf.summary.scalar('Main/step_reward_age', cur_reward_age, step=epoch)
+                tf.summary.scalar('Main/step_reward_average', cur_reward_average, step=epoch)
 
             summary_writer.flush()
 
         # save final model
         self.save_model(episode, cur_time)
-        sio.savemat(record_dir + '/data.mat', {'finish_len': finish_length, 'finish_data': finish_size, 'ages': sensor_ages})
+        sio.savemat(record_dir + '/data.mat',
+                    {'finish_len': finish_length, 'finish_data': finish_size, 'ages': sensor_ages})
         # with open(record_dir + '/record.json', 'w') as f:
         #     json.dump(summary_record, f)
 
-        """gif"""
+        """画出环境map gif"""
         self.env.render(env_log_dir, epoch, True)
         img_paths = glob.glob(env_log_dir + '/*.png')
         # linux(/)和windows(\)文件路径斜杠不同，注意区分

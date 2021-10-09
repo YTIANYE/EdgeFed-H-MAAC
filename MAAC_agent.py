@@ -15,6 +15,7 @@ import tqdm
 import json
 import platform
 from print_logs import *
+from Params import *
 
 # tf.random.set_seed(11)
 
@@ -416,6 +417,7 @@ class MAACAgent(object):
         keras.utils.plot_model(self.agent_critics[0], 'logs/model_figs/new_agent_critic.png', show_shapes=True)
 
     """actor执行动作"""
+
     # def actor_act(self, epoch):  # 注意epoch是从0开始的
     # 方式四需要传入 finish_length
     def actor_act(self, epoch, finish_length):
@@ -479,19 +481,32 @@ class MAACAgent(object):
             new_bandvec = self.center_actor.predict([done_buffer_list, pos_list])
             # print('new_bandwidth{}'.format(new_bandvec[0]))
             """reward 和 经过预测后得到的结果"""
+            """
+            # # 单一目标
             # new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
-            new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
-            # TODO reward 修改
-            # 方式三：需要对new_rewards进行一下处理,修改reward时注意一起修改
-            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            # # TODO reward 修改
+            # # 方式三：需要对new_rewards进行一下处理,修改reward时注意一起修改
+            # # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            #
+            # # 方式四：最近epoch_num个epoch的平均完成任务数     对方式三的reward进行覆盖
+            # if epoch > epoch_num:                 # 最近64个epoch平均每个epoch完成的任务数
+            #     new_reward = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            # else:
+            #     new_reward = finish_length[-1] / epoch
+            # new_rewards = [new_reward for reward in new_rewards]       
+            """
 
-            # 方式四：最近epoch_num个epoch的平均完成任务数     对方式三的reward进行覆盖
-            epoch_num = 200 # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
-            if epoch > epoch_num:                 # 最近64个epoch平均每个epoch完成的任务数
-                new_reward = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            # 多目标
+            new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
+                                                                                             new_bandvec[0])
+            if epoch > epoch_num:  # 最近epoch_num个epoch平均每个epoch完成的任务数
+                new_reward_average = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
             else:
-                new_reward = finish_length[-1] / epoch
-            new_rewards = [new_reward for reward in new_rewards]
+                new_reward_average = finish_length[-1] / epoch
+            new_rewards_average = [new_reward_average for reward in new_rewards_average]
+            # new_rewards方式三
+            new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
+                           range(len(new_rewards_average))]
 
             new_done_buffer_list, new_pos_list = self.env.get_center_state()
             new_done_buffer_list = tf.expand_dims(new_done_buffer_list, axis=0)
@@ -537,19 +552,46 @@ class MAACAgent(object):
             # center
             new_bandvec = np.random.rand(self.agent_num)  # 通过本函数可以返回一个或一组服从“0~1”均匀分布的随机样本值。
             new_bandvec = new_bandvec / np.sum(new_bandvec)
-            new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
-            # TODO reward 修改
-            # 方式三：需要对new_rewards进行一下处理,修改reward时注意一起修改
-            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            "reward"
+            # # 单目标
+            # new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            # # TODO reward 修改
+            # # 方式三：需要对new_rewards进行一下处理,修改reward时注意一起修改
+            # # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+            #
+            # # 方式四：最近n个epoch的平均完成任务数，    需要对方式三的reward进行覆盖
+            # if epoch == 0:
+            #     new_reward = 0
+            # else:
+            #     new_reward = finish_length[-1] / epoch      # 前16个都是平均值作为reward
+            # new_rewards = [new_reward for reward in new_rewards]
 
-            # 方式四：最近n个epoch的平均完成任务数，    需要对方式三的reward进行覆盖
+            # 多目标
+            new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
+                                                                                             new_bandvec)
             if epoch == 0:
-                new_reward = 0
+                new_reward_average = 0
             else:
-                new_reward = finish_length[-1] / epoch      # 前16个都是平均值作为reward
-            new_rewards = [new_reward for reward in new_rewards]
-
-        return new_rewards[-1]  # 四个reward的值都是一样的，所以返回其中之一即可
+                new_reward_average = finish_length[-1] / epoch  # 前16个都是平均值作为reward
+            new_rewards_average = [new_reward_average for reward in new_rewards_average]
+            # 方式一
+            # new_rewards = [(new_rewards_average[i] / 8.0 * 1.0 - new_rewards_age[i] / 100.0 * 1.0) for i in
+            #                range(len(new_rewards_average))]
+            # 方式二
+            # new_rewards = [(new_rewards_average[i] / self.agent_num * 1.0 - new_rewards_age[i] / epoch * 1.0) for i in
+            #                range(len(new_rewards_average))]
+            # 方式二 改进
+            # new_rewards = [((new_rewards_average[i] / self.agent_num * 1.0 - new_rewards_age[i] / epoch * 1.0 + 1.0) / 2) for i in
+            #                range(len(new_rewards_average))]
+            # new_rewards方式三
+            new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
+                           range(len(new_rewards_average))]
+            # # 方式四
+            # reward_age = min(1, new_rewards_age[i] / (MAX_EPOCH / 10))
+            # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - reward_age) * weight_age)for i in range(len(new_rewards_average))]
+       # return new_rewards[-1]
+        # 返回总reward、平均年龄、平均任务数
+        return new_rewards[-1], new_rewards_age[-1], new_rewards_average[-1]  # new_rewards[-1]四个reward的值都是一样的，所以返回其中之一即可
 
     """经验重放过程,修改网络参数"""
 
@@ -559,9 +601,7 @@ class MAACAgent(object):
         for no, agent_memory in self.agent_memory.items():
             if len(agent_memory) < self.batch_size:
                 continue
-            # print([len(agent_memory[-100:]), self.batch_size])
-            # 这里sample截取的有问题，应该是agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
-            # 方式一：原sample方式
+            # # 方式一：原sample方式
             # samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
             #     agent_memory[-self.batch_size * 2:],
             #     int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
@@ -569,6 +609,7 @@ class MAACAgent(object):
             samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
                 agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
                 int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
+
             # t_agent_actor = self.target_agent_actors[no]
             # t_agent_critic = self.target_agent_critics[no]
             # agent_actor = self.agent_actors[no]
@@ -609,6 +650,7 @@ class MAACAgent(object):
                 # tape.watch(self.agent_critics[no].trainable_variables)
                 q_values = self.agent_critics[no](
                     [state_map, total_data_state, done_data_state, move, op_softmax, band])
+                # TODO：  error 尝试AdamOptimizer  https://www.cnblogs.com/pinard/p/10345762.html
                 ac_error = q_values - tf.cast(target_qs, dtype=tf.float32)
                 # ac_error = q_values - target_qs
                 ac_loss = tf.reduce_mean(tf.math.square(ac_error))  # agent_critic_loss
@@ -641,8 +683,7 @@ class MAACAgent(object):
         if len(self.center_memory) < self.batch_size:
             return
         else:
-            # 这里sample截取的有问题，应该是self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)]
-            # 方式一：原sample方式
+            # # 方式一：原sample方式
             # center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
             #     self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
             # 方式二：改后的sample方式
@@ -710,6 +751,7 @@ class MAACAgent(object):
         # tf.summary.trace_on(graph=True, profiler=True)
         os.makedirs('logs/models/' + cur_time)
         done, episode, steps, epoch, total_reward = False, 0, 0, 0, 0  # 一个episode有固定max_step个step，epochs是所有step的总计数，epochs = episode * step    理论上：一个epoch中存在多个eposide。所有的训练数据都要跑一遍算一个epoch
+        total_reward_age, total_reward_average = 0, 0
         # TODO finish_length
         finish_length = []  # 完成的数
         finish_size = []  # 完成的量
@@ -764,23 +806,30 @@ class MAACAgent(object):
 
                 with summary_writer.as_default():  # Summary： 所有需要在TensorBoard上展示的统计结果
                     tf.summary.scalar('Main/episode_reward', total_reward, step=episode)  # 添加标量统计结果
+                    tf.summary.scalar('Main/episode_reward_age', total_reward_age, step=episode)  # 添加标量统计结果
+                    tf.summary.scalar('Main/episode_reward_average', total_reward_average, step=episode)  # 添加标量统计结果
                     # tf.summary.scalar('Main/episode_steps', steps, step=episode)
                     # tf.summary.trace_export(name="model_trace", step=0, profiler_outdir=train_log_dir)
 
                 summary_writer.flush()
                 self.save_model(episode, cur_time)
                 steps = 0
-                total_reward = 0
+                total_reward, total_reward_age, total_reward_average = 0, 0, 0
 
             """执行action"""
+            # cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
             # reward 方式四需要传入 finish_length
-            cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
+            cur_reward, cur_reward_age, cur_reward_average = self.actor_act(epoch, finish_length)  # 获取当前总reward、平均年龄、平均任务数
+            # cur_reward= self.actor_act(epoch, finish_length)  # 获取当前reward
             # cur_reward = self.actor_act(epoch)  # 获取当前reward
-            print('epoch:%s reward:%f' % (epoch, cur_reward))
-            # print('episode-%s reward:%f' % (episode, cur_reward))
+            print('epoch:%s cur_reward:%f' % (epoch, cur_reward))
+            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
+            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
             # 打印控制台日志
             f_print_logs = PRINT_LOGS(cur_time).open()
             print('epoch:%s reward:%f' % (epoch, cur_reward), file=f_print_logs)
+            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age), file=f_print_logs)
+            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average), file=f_print_logs)
             f_print_logs.close()
 
             """经验重放"""
@@ -818,6 +867,8 @@ class MAACAgent(object):
                 update_target_net(self.center_critic, self.target_center_critic, self.tau)
 
             total_reward += cur_reward
+            total_reward_age += cur_reward_age
+            total_reward_average += cur_reward_average
             steps += 1
             epoch += 1
 
@@ -837,6 +888,8 @@ class MAACAgent(object):
                                           self.summaries['agent%s-critic_loss' % acount], step=epoch)
                 # tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
                 tf.summary.scalar('Main/step_reward', cur_reward, step=epoch)
+                tf.summary.scalar('Main/step_reward_age', cur_reward_age, step=epoch)
+                tf.summary.scalar('Main/step_reward_average', cur_reward_average, step=epoch)
 
             summary_writer.flush()
 

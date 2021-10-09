@@ -14,7 +14,7 @@ max_size = 5  # 收集数据和执行数据的最大缓冲区大小
 sensor_lam = 1e3  # 1000 # 泊松分布 lam-发生率或已知次数
 
 # 测试周期：经过大量实验实例观察一般2k个epoch开始趋于稳定，故实验周期设置为3k
-MAX_EPOCH = 3
+MAX_EPOCH = 3000 # 10000 # 3000
 MAX_EP_STEPS = 200
 # 大周期
 # MAX_EPOCH = 5000
@@ -40,12 +40,18 @@ render_freq = 32
 FL = True  # 控制是否联合学习的开关，默认True
 # FL = False
 FL_omega = 0.5  # todo 关于联合学习因子其他情况还没有进行实验
+
+epoch_num = 200     # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
+
+weight_age = 0.5
+weight_average = 1 - weight_age
+
 # random seeds are fixed to reproduce the results
 map_seed = 1
 rand_seed = 17
-np.random.seed(map_seed)
-random.seed(map_seed)
-tf.random.set_seed(rand_seed) # TODO 随机种子的位置有没有问题
+# np.random.seed(map_seed)
+# random.seed(map_seed)
+# tf.random.set_seed(rand_seed) # TODO 随机种子的位置有没有问题
 
 # 记录环境参数
 params = {
@@ -76,5 +82,8 @@ params = {
     'up_freq': up_freq,
     'render_freq': render_freq,
     # 'FL': FL,
-    'FL_omega': FL_omega
+    'FL_omega': FL_omega,
+    'epoch_num': epoch_num,
+    'weight_age': weight_age,
+    'weight_average': weight_average
 }

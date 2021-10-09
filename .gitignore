@@ -7,11 +7,7 @@
 *.iml
 /logs/
 /logs_age/
+/logs_age_and_average/
 /logs_average/
-/logs_average_AC/
-/logs_average_nearest_epoch/
-/logs_buffer/
-/logs_sample/
-/logs_sample2/
 /logs_templete/
 /logsTest/

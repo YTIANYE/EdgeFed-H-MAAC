@@ -90,10 +90,11 @@ class MEC_MARL_ENV(gym.Env):
     info (dict):用于调试的诊断信息，有时也用于学习，但正式的评价不允许使用该信息进行学习。 这是一个典型的agent-environment loop 的实现。
     """
 
-    # def step(self, agent_action, center_action):
     def step(self, agent_action, center_action):
         obs = []
         reward = []
+        reward_average = []
+        reward_age = []
         done = []
         info = {'n': []}
         self.agents = self.world.agents
@@ -111,17 +112,30 @@ class MEC_MARL_ENV(gym.Env):
             obs.append(self.get_obs(agent))  # 观察范围
             done.append(self._get_done(agent))  # 完成反馈
             # TODO reward修改
+            # 年龄的reward
             # reward.append(self._get_age())  # 每个agent reward相同，都是平均年龄
-            reward.append(self._get_reward())
+            # # 平均任务的reward
+            # reward.append(self._get_reward())
+            # # 联合的reward
+            reward_age.append(self._get_age())
+            reward_average.append(self._get_reward())
             info['n'].append(self._get_info(agent))
         self.state = obs
-        # reward
-        reward_sum = np.sum(reward)
+        # # 单个reward
+        # reward_sum = np.sum(reward)
+        # logging.info("get reward")
+        # if self.aggregate_reward:  # 源代码这句话不执行，即每个agent不共用相同的sum_reward
+        #     reward = [reward_sum] * self.agent_num
+        #     # reward = [reward_sum / self.agent_num] * self.agent_num
+        # return self.state, reward, done, info
+        # 多个reward
+        reward_age_sum = np.sum(reward_age)
+        reward_average_sum = np.sum(reward_average)
         logging.info("get reward")
         if self.aggregate_reward:  # 源代码这句话不执行，即每个agent不共用相同的sum_reward
-            reward = [reward_sum] * self.agent_num
-            # reward = [reward_sum / self.agent_num] * self.agent_num
-        return self.state, reward, done, info
+            reward_age = [reward_age_sum] * self.agent_num
+            reward_average = [reward_average_sum] * self.agent_num
+        return self.state, reward_age, reward_average, done, info
 
     def reset(self):
         # reset world

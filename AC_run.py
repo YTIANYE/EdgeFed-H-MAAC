@@ -1,12 +1,10 @@
 import gym
 import numpy as np
 import random
-
 from MEC_env import mec_def
 from MEC_env import mec_env
 from Params import *
 import AC_agent
-
 import tensorflow as tf
 from tensorflow import keras
 import tensorboard
@@ -19,6 +17,9 @@ from print_logs import *
 
 # 传入数据源个数
 def run(sensor_num):
+    np.random.seed(map_seed)
+    random.seed(map_seed)
+    tf.random.set_seed(rand_seed)
     # 选取GPU
     print("TensorFlow version: ", tf.__version__)
     # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -41,6 +42,8 @@ def run(sensor_num):
 
     # 记录控制台日志
     f_print_logs = PRINT_LOGS(m_time).open()
+    print("运行程序：AC_run")
+    print("运行程序：AC_run", file=f_print_logs)
 
     # 记录开始时间
     startTime = time.time()
@@ -89,6 +92,17 @@ def experiment_1():
         run(sensor_nums[i])
 
 
+# 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
+def experiment_3():
+    """
+    变量：数据源个数
+    """
+    sensor_nums = [60, 60, 60, 60, 60]
+    for i in range(len(sensor_nums)):
+        print("sensor_num:", sensor_nums[i])
+        run(sensor_nums[i])
+
+
 def AC_run():
     print("运行程序：AC_run")
 
@@ -96,12 +110,10 @@ def AC_run():
     # 实验1：研究数据源个数对reward趋势的影响
     # experiment_1()
 
+    # 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
+    # experiment_3()
+
     """测试运行"""
     run(60)
+    # run(60)
 
-
-"""下一步计划"""
-
-"""
-改正sample方式
-"""
