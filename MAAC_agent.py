@@ -621,7 +621,7 @@ class MAACAgent(object):
             total_data_state = np.vstack([sample[0][1] for sample in samples])
             done_data_state = np.vstack([sample[0][2] for sample in samples])
             band = np.vstack([sample[0][3] for sample in samples])
-            # action
+            # action    
             move = np.vstack([sample[1][0] for sample in samples])
             op_softmax = np.vstack([sample[1][1] for sample in samples])
             # reward
