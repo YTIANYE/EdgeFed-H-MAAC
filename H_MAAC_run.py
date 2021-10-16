@@ -160,12 +160,12 @@ def H_MAAC_run():
     # experiment_2()
 
     # 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
-    # experiment_3()
+    experiment_3()
 
     # 下一步计划
     # 测试reward方式四的情况，并且做上下限，
     # reward的有没有明显提高，根据设限之后的reward增长趋势，应该会提高并且平稳
 
     """测试运行"""
-    run(60)
+    # run(60)
     # run(60)

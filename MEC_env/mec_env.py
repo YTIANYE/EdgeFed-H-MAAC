@@ -121,13 +121,7 @@ class MEC_MARL_ENV(gym.Env):
             reward_average.append(self._get_reward())
             info['n'].append(self._get_info(agent))
         self.state = obs
-        # # 单个reward
-        # reward_sum = np.sum(reward)
-        # logging.info("get reward")
-        # if self.aggregate_reward:  # 源代码这句话不执行，即每个agent不共用相同的sum_reward
-        #     reward = [reward_sum] * self.agent_num
-        #     # reward = [reward_sum / self.agent_num] * self.agent_num
-        # return self.state, reward, done, info
+
         # 多个reward
         reward_age_sum = np.sum(reward_age)
         reward_average_sum = np.sum(reward_average)
@@ -136,6 +130,14 @@ class MEC_MARL_ENV(gym.Env):
             reward_age = [reward_age_sum] * self.agent_num
             reward_average = [reward_average_sum] * self.agent_num
         return self.state, reward_age, reward_average, done, info
+
+        # # 单个reward
+        # reward_sum = np.sum(reward)
+        # logging.info("get reward")
+        # if self.aggregate_reward:  # 源代码这句话不执行，即每个agent不共用相同的sum_reward
+        #     reward = [reward_sum] * self.agent_num
+        #     # reward = [reward_sum / self.agent_num] * self.agent_num
+        # return self.state, reward, done, info
 
     def reset(self):
         # reset world

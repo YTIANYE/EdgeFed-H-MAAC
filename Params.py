@@ -43,8 +43,10 @@ FL_omega = 0.5  # todo 关于联合学习因子其他情况还没有进行实验
 
 epoch_num = 200     # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
 
-weight_age = 0.5
-weight_average = 1 - weight_age
+# weight_age = 0.5
+# weight_average = 1 - weight_age
+weight_age = 1
+weight_average = 0
 
 # random seeds are fixed to reproduce the results
 map_seed = 1
@@ -52,6 +54,7 @@ rand_seed = 17
 # np.random.seed(map_seed)
 # random.seed(map_seed)
 # tf.random.set_seed(rand_seed) # TODO 随机种子的位置有没有问题
+sample_method = 1      # 默认方式二 # 采样方式一 1；    采样方式二 2
 
 # 记录环境参数
 params = {
@@ -85,5 +88,6 @@ params = {
     'FL_omega': FL_omega,
     'epoch_num': epoch_num,
     'weight_age': weight_age,
-    'weight_average': weight_average
+    'weight_average': weight_average,
+    'sample_method': sample_method
 }

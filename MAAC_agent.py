@@ -499,14 +499,22 @@ class MAACAgent(object):
             # 多目标
             new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
                                                                                              new_bandvec[0])
-            if epoch > epoch_num:  # 最近epoch_num个epoch平均每个epoch完成的任务数
-                new_reward_average = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
-            else:
-                new_reward_average = finish_length[-1] / epoch
-            new_rewards_average = [new_reward_average for reward in new_rewards_average]
-            # new_rewards方式三
-            new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
-                           range(len(new_rewards_average))]
+            # if epoch > epoch_num:  # 最近epoch_num个epoch平均每个epoch完成的任务数
+            #     new_reward_average = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            # else:
+            #     new_reward_average = finish_length[-1] / epoch
+            # new_rewards_average = [new_reward_average for reward in new_rewards_average]
+
+            # # new_rewards方式三
+            # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
+            #                range(len(new_rewards_average))]
+            # new_rewards方式五
+            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+
+            # 方式五.二 当前完成任务数
+            new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
+            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
 
             new_done_buffer_list, new_pos_list = self.env.get_center_state()
             new_done_buffer_list = tf.expand_dims(new_done_buffer_list, axis=0)
@@ -567,13 +575,12 @@ class MAACAgent(object):
             # new_rewards = [new_reward for reward in new_rewards]
 
             # 多目标
-            new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
-                                                                                             new_bandvec)
-            if epoch == 0:
-                new_reward_average = 0
-            else:
-                new_reward_average = finish_length[-1] / epoch  # 前16个都是平均值作为reward
-            new_rewards_average = [new_reward_average for reward in new_rewards_average]
+            new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list, new_bandvec)
+            # if epoch == 0:
+            #     new_reward_average = 0
+            # else:
+            #     new_reward_average = finish_length[-1] / epoch  # 前16个都是平均值作为reward
+            # new_rewards_average = [new_reward_average for reward in new_rewards_average]
             # 方式一
             # new_rewards = [(new_rewards_average[i] / 8.0 * 1.0 - new_rewards_age[i] / 100.0 * 1.0) for i in
             #                range(len(new_rewards_average))]
@@ -583,13 +590,25 @@ class MAACAgent(object):
             # 方式二 改进
             # new_rewards = [((new_rewards_average[i] / self.agent_num * 1.0 - new_rewards_age[i] / epoch * 1.0 + 1.0) / 2) for i in
             #                range(len(new_rewards_average))]
-            # new_rewards方式三
-            new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
-                           range(len(new_rewards_average))]
+            # # new_rewards方式三
+            # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
+            #                range(len(new_rewards_average))]
             # # 方式四
             # reward_age = min(1, new_rewards_age[i] / (MAX_EPOCH / 10))
             # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - reward_age) * weight_age)for i in range(len(new_rewards_average))]
-       # return new_rewards[-1]
+
+            # # new_rewards方式五
+            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+
+            # 方式五.二 当前完成任务数
+            if len(finish_length) > 1:
+                new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
+            else:
+                new_rewards_average = [0 for reward in new_rewards_average]
+            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
+
+        # return new_rewards[-1]
         # 返回总reward、平均年龄、平均任务数
         return new_rewards[-1], new_rewards_age[-1], new_rewards_average[-1]  # new_rewards[-1]四个reward的值都是一样的，所以返回其中之一即可
 
@@ -601,15 +620,17 @@ class MAACAgent(object):
         for no, agent_memory in self.agent_memory.items():
             if len(agent_memory) < self.batch_size:
                 continue
-            # # 方式一：原sample方式
-            # samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-            #     agent_memory[-self.batch_size * 2:],
-            #     int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
-            # 方式二：改后的sample方式
-            samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-                agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
-                int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
-
+            """选择采样方式"""
+            if sample_method == 1:
+                # 方式一：原sample方式
+                samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+                    agent_memory[-self.batch_size * 2:],
+                    int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
+            elif sample_method == 2:
+                # 方式二：改后的sample方式
+                samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+                    agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
+                    int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
             # t_agent_actor = self.target_agent_actors[no]
             # t_agent_critic = self.target_agent_critics[no]
             # agent_actor = self.agent_actors[no]
@@ -683,13 +704,16 @@ class MAACAgent(object):
         if len(self.center_memory) < self.batch_size:
             return
         else:
-            # # 方式一：原sample方式
-            # center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-            #     self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
-            # 方式二：改后的sample方式
-            center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-                self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
-                int(self.batch_size * (1 - self.sample_prop)))
+            """选择不同的采样方式"""
+            if sample_method == 1:
+                # 方式一：原sample方式
+                center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+                    self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
+            elif sample_method == 2:
+                # 方式二：改后的sample方式
+                center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+                    self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
+                    int(self.batch_size * (1 - self.sample_prop)))
             """获取sample中的信息"""
             done_buffer_list = np.vstack([sample[0][0] for sample in center_samples])
             pos_list = np.vstack([sample[0][1] for sample in center_samples])

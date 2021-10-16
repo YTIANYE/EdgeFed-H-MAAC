@@ -355,13 +355,16 @@ class ACAgent(object):
         # center replay
         if len(self.center_memory) < self.batch_size:
             return
-        # # 方式一：原sample方式
-        # center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-        #     self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
-        # 方式二：改后的sample方式
-        center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
-            self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
-            int(self.batch_size * (1 - self.sample_prop)))
+        """选择不同的采样方式"""
+        if sample_method == 1:
+            # 方式一：原sample方式
+            center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+                self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
+        elif sample_method == 2:
+            # 方式二：改后的sample方式
+            center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
+                self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
+                int(self.batch_size * (1 - self.sample_prop)))
         """获取sample中的信息"""
         sensor_map = np.vstack([sample[0][0] for sample in center_samples])
         total_buffer_list = np.vstack([sample[0][1] for sample in center_samples])
