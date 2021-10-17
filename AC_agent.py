@@ -17,6 +17,10 @@ import platform
 from Params import *
 from print_logs import *
 
+np.random.seed(map_seed)
+random.seed(map_seed)
+tf.random.set_seed(rand_seed)
+
 
 def get_center_state(env):
     total_buffer_list = np.zeros([env.agent_num, 2, env.max_buffer_size])
@@ -273,7 +277,7 @@ class ACAgent(object):
 
             """reward 和 经过预测后得到的结果"""
             # 单一目标
-            # new_state_map, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            new_state_map, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
             # # TODO reward 修改
             # # reward 第三种形式需要对new_rewards进行一下处理
             # # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
@@ -285,6 +289,7 @@ class ACAgent(object):
             #     new_reward = finish_length[-1] / epoch
             # new_rewards = [new_reward for reward in new_rewards]
 
+            """
             # 多目标
             new_state_map, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list, new_bandvec)
             # 方式四：最近epoch_num个epoch的平均完成任务数     对方式三的reward进行覆盖
@@ -296,6 +301,9 @@ class ACAgent(object):
             # new_rewards方式三        [不同weight_age下的new_rewards比较，由于1 * weight_age 的不同，不能直接用来比较]
             new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
                            range(len(new_rewards_average))]
+            """
+
+            """经验池 添加内容 record memory"""
             new_sensor_map, agent_map = self.env.get_statemap()
             new_total_buffer_list, new_done_buffer_list, new_pos_list = get_center_state(self.env)
             new_total_buffer_list = tf.expand_dims(new_total_buffer_list, axis=0)
@@ -323,18 +331,19 @@ class ACAgent(object):
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             "reward"
             # 单目标
-            # new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
-            # # TODO reward 修改
-            # # reward 第三种形式需要对new_rewards进行一下处理
-            # # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
-            #
-            # # 方式四：最近n个epoch的平均完成任务数，    需要对方式三的reward进行覆盖
+            new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
+            # TODO reward 修改
+            # reward 第三种形式需要对new_rewards进行一下处理
+            # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
+
+            # 方式四：最近n个epoch的平均完成任务数，    需要对方式三的reward进行覆盖
             # if epoch == 0:
             #     new_reward = 0
             # else:
             #     new_reward = finish_length[-1] / epoch  # 前16个都是平均值作为reward
             # new_rewards = [new_reward for reward in new_rewards]
 
+            """
             # 多目标
             new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
                                                                                              new_bandvec)
@@ -346,9 +355,14 @@ class ACAgent(object):
             # new_rewards方式三
             new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
                            range(len(new_rewards_average))]
+            """
 
-        # return new_rewards[-1]
-        return new_rewards[-1], new_rewards_age[-1], new_rewards_average[-1]  # new_rewards[-1]四个reward的值都是一样的，所以返回其中之一即可
+        # 单目标
+        return new_rewards[-1]
+
+        # # 多目标
+        # # 返回总reward、平均年龄、平均任务数
+        # return new_rewards[-1], new_rewards_age[-1], new_rewards_average[-1]  # new_rewards[-1]四个reward的值都是一样的，所以返回其中之一即可
 
     # @tf.function(experimental_relax_shapes=True)
     def replay(self):
@@ -474,7 +488,10 @@ class ACAgent(object):
                 total_reward, total_reward_age, total_reward_average = 0, 0, 0
 
             """执行action"""
+            # 单目标
+            # cur_reward = self.actor_act(epoch)  # 获取当前reward
             # reward 方式四需要传入 finish_length
+
             cur_reward, cur_reward_age, cur_reward_average = self.actor_act(epoch, finish_length)  # 获取当前总reward、平均年龄、平均任务数
             # cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
             # cur_reward = self.actor_act(epoch)
@@ -483,14 +500,15 @@ class ACAgent(object):
             step_reward.append(cur_reward)
             step_reward_age.append(cur_reward_age)
             step_reward_average.append(cur_reward_average)
+
             print('epoch:%s reward:%f' % (epoch, cur_reward))
-            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
-            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
+            # print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
+            # print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
             # 打印控制台日志
             f_print_logs = PRINT_LOGS(cur_time).open()
             print('epoch:%s reward:%f' % (epoch, cur_reward), file=f_print_logs)
-            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age), file=f_print_logs)
-            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average), file=f_print_logs)
+            # print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age), file=f_print_logs)
+            # print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average), file=f_print_logs)
             f_print_logs.close()
 
             """经验重放"""
@@ -508,8 +526,8 @@ class ACAgent(object):
                 update_target_net(self.center_critic, self.target_center_critic, self.tau)
 
             total_reward += cur_reward
-            total_reward_age += cur_reward_age
-            total_reward_average += cur_reward_average
+            # total_reward_age += cur_reward_age
+            # total_reward_average += cur_reward_average
             steps += 1
             epoch += 1
 
@@ -521,8 +539,8 @@ class ACAgent(object):
                     tf.summary.scalar('Stats/cq_val', self.summaries['cq_val'], step=epoch)
                 # tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
                 tf.summary.scalar('Main/step_reward', cur_reward, step=epoch)
-                tf.summary.scalar('Main/step_reward_age', cur_reward_age, step=epoch)
-                tf.summary.scalar('Main/step_reward_average', cur_reward_average, step=epoch)
+                # tf.summary.scalar('Main/step_reward_age', cur_reward_age, step=epoch)
+                # tf.summary.scalar('Main/step_reward_average', cur_reward_average, step=epoch)
 
             summary_writer.flush()
 

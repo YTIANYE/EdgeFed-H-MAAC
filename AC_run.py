@@ -103,6 +103,17 @@ def experiment_3():
         run(sensor_nums[i])
 
 
+# 实验4：研究数据平均年龄
+def experiment_4():
+    """
+    变量：数据源个数
+    """
+    sensor_nums = [60, 60, 60, 60, 60]
+    for i in range(len(sensor_nums)):
+        print("sensor_num:", sensor_nums[i])
+        run(sensor_nums[i])
+
+
 def AC_run():
     print("运行程序：AC_run")
 
@@ -113,7 +124,9 @@ def AC_run():
     # 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
     # experiment_3()
 
-    """测试运行"""
-    run(60)
-    # run(60)
+    # 实验4：研究数据平均年龄
+    experiment_4()
 
+    """测试运行"""
+    # run(60)
+    # run(60)
