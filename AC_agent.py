@@ -434,11 +434,20 @@ class ACAgent(object):
         finish_length = []
         finish_size = []
         sensor_ages = []
+        episode_reward = []
+        episode_reward_age = []
+        episode_reward_average = []
+        step_reward = []
+        step_reward_age = []
+        step_reward_average = []
+
         # summary_record = []
 
         while epoch < max_epochs:
             print('epoch%s' % epoch)
-            if render and (epoch % 32 == 1):
+
+            """每20个epoch保存一次环境map"""
+            if render and (epoch % 20 == 1):
                 self.env.render(env_log_dir, epoch, True)
 
             if steps >= max_step:
@@ -459,6 +468,9 @@ class ACAgent(object):
                 summary_writer.flush()
                 self.save_model(episode, cur_time)
                 steps = 0
+                episode_reward.append(total_reward)
+                episode_reward_age.append(total_reward_age)
+                episode_reward_average.append(total_reward_average)
                 total_reward, total_reward_age, total_reward_average = 0, 0, 0
 
             """执行action"""
@@ -466,6 +478,11 @@ class ACAgent(object):
             cur_reward, cur_reward_age, cur_reward_average = self.actor_act(epoch, finish_length)  # 获取当前总reward、平均年龄、平均任务数
             # cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
             # cur_reward = self.actor_act(epoch)
+
+            """记录reward"""
+            step_reward.append(cur_reward)
+            step_reward_age.append(cur_reward_age)
+            step_reward_average.append(cur_reward_average)
             print('epoch:%s reward:%f' % (epoch, cur_reward))
             print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
             print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
@@ -512,7 +529,16 @@ class ACAgent(object):
         # save final model
         self.save_model(episode, cur_time)
         sio.savemat(record_dir + '/data.mat',
-                    {'finish_len': finish_length, 'finish_data': finish_size, 'ages': sensor_ages})
+                    {'finish_len': finish_length,
+                     'finish_data': finish_size,
+                     'ages': sensor_ages,
+                     'step_reward': step_reward,
+                     'step_reward_age': step_reward_age,
+                     'step_reward_average': step_reward_average,
+                     'episode_reward': episode_reward,
+                     'episode_reward_age': episode_reward_age,
+                     'episode_reward_average': episode_reward_average,
+                     })
         # with open(record_dir + '/record.json', 'w') as f:
         #     json.dump(summary_record, f)
 

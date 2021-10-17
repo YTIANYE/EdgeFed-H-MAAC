@@ -513,8 +513,8 @@ class MAACAgent(object):
 
             # 方式五.二 当前完成任务数
             new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
-            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
-            new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
+            new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
 
             new_done_buffer_list, new_pos_list = self.env.get_center_state()
             new_done_buffer_list = tf.expand_dims(new_done_buffer_list, axis=0)
@@ -605,8 +605,8 @@ class MAACAgent(object):
                 new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
             else:
                 new_rewards_average = [0 for reward in new_rewards_average]
-            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
-            new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
+            new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
 
         # return new_rewards[-1]
         # 返回总reward、平均年龄、平均任务数
@@ -780,6 +780,12 @@ class MAACAgent(object):
         finish_length = []  # 完成的数
         finish_size = []  # 完成的量
         sensor_ages = []  # 数据源的年龄
+        episode_reward = []
+        episode_reward_age = []
+        episode_reward_average = []
+        step_reward = []
+        step_reward_age = []
+        step_reward_average = []
         # sensor_map = self.env.DS_map
         # sensor_pos_list = self.env.world.sensor_pos
         # sensor_states = [self.env.DS_state]
@@ -827,7 +833,7 @@ class MAACAgent(object):
                 print(
                     'episode {}:  total reward: {}, steps: {}, epochs: {}'.format(episode, total_reward / steps, steps,
                                                                                   epoch))  # TODO reward?
-
+                """tensorboard 喂入需要监听的数据"""
                 with summary_writer.as_default():  # Summary： 所有需要在TensorBoard上展示的统计结果
                     tf.summary.scalar('Main/episode_reward', total_reward, step=episode)  # 添加标量统计结果
                     tf.summary.scalar('Main/episode_reward_age', total_reward_age, step=episode)  # 添加标量统计结果
@@ -838,6 +844,9 @@ class MAACAgent(object):
                 summary_writer.flush()
                 self.save_model(episode, cur_time)
                 steps = 0
+                episode_reward.append(total_reward)
+                episode_reward_age.append(total_reward_age)
+                episode_reward_average.append(total_reward_average)
                 total_reward, total_reward_age, total_reward_average = 0, 0, 0
 
             """执行action"""
@@ -846,6 +855,11 @@ class MAACAgent(object):
             cur_reward, cur_reward_age, cur_reward_average = self.actor_act(epoch, finish_length)  # 获取当前总reward、平均年龄、平均任务数
             # cur_reward= self.actor_act(epoch, finish_length)  # 获取当前reward
             # cur_reward = self.actor_act(epoch)  # 获取当前reward
+
+            """记录reward"""
+            step_reward.append(cur_reward)
+            step_reward_age.append(cur_reward_age)
+            step_reward_average.append(cur_reward_average)
             print('epoch:%s cur_reward:%f' % (epoch, cur_reward))
             print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
             print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
@@ -922,7 +936,14 @@ class MAACAgent(object):
         sio.savemat(record_dir + '/data.mat',
                     {'finish_len': finish_length,
                      'finish_data': finish_size,
-                     'ages': sensor_ages})
+                     'ages': sensor_ages,
+                     'step_reward': step_reward,
+                     'step_reward_age': step_reward_age,
+                     'step_reward_average': step_reward_average,
+                     'episode_reward': episode_reward,
+                     'episode_reward_age': episode_reward_age,
+                     'episode_reward_average': episode_reward_average,
+                     })
         # sio.savemat(record_dir + '/data.mat',
         #             {'finish_len': finish_length,
         #              'finish_data': finish_size,
