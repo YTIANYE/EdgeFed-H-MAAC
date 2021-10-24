@@ -15,7 +15,7 @@ sensor_lam = 1e3  # 1000 # 泊松分布 lam-发生率或已知次数
 
 # 测试周期：经过大量实验实例观察一般2k个epoch开始趋于稳定，故实验周期设置为3k
 MAX_EPOCH = 3000    # 10000 # 3000
-MAX_EP_STEPS = 200
+MAX_EP_STEPS = 200 # 200
 # 大周期
 # MAX_EPOCH = 5000
 # MAX_EP_STEPS = 200
@@ -46,7 +46,7 @@ epoch_num = 200     # 16 32 64 128  200   # 取最近epoch_num个epoch计算平�
 # weight_age = 0.5
 # weight_average = 1 - weight_age
 weight_age = 1
-weight_average = 10
+weight_average = 5
 
 # random seeds are fixed to reproduce the results
 map_seed = 1
@@ -54,7 +54,7 @@ rand_seed = 17
 # np.random.seed(map_seed)
 # random.seed(map_seed)
 # tf.random.set_seed(rand_seed) # TODO 随机种子的位置有没有问题
-sample_method = 1      # 默认方式二 # 采样方式一 1；    采样方式二 2
+sample_method = 2      # 默认方式二 # 采样方式一 1；    采样方式二 2
 
 # 记录环境参数
 params = {

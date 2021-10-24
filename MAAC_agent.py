@@ -487,7 +487,8 @@ class MAACAgent(object):
             """reward 和 经过预测后得到的结果"""
 
             # 单一目标
-            new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
+            """
+            # new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec[0])
             # TODO reward 修改
             # 方式三：需要对new_rewards进行一下处理,修改reward时注意一起修改
             # new_rewards = [reward / (epoch + 1) for reward in new_rewards]
@@ -498,28 +499,32 @@ class MAACAgent(object):
             # else:
             #     new_reward = finish_length[-1] / epoch
             # new_rewards = [new_reward for reward in new_rewards]
+            """
 
             # 多目标
             new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
                                                                                              new_bandvec[0])
 
-            # if epoch > epoch_num:  # 最近epoch_num个epoch平均每个epoch完成的任务数
-            #     new_reward_average = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
-            # else:
-            #     new_reward_average = finish_length[-1] / epoch
-            # new_rewards_average = [new_reward_average for reward in new_rewards_average]
+            if epoch > epoch_num:  # 最近epoch_num个epoch平均每个epoch完成的任务数
+                new_reward_average = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            else:
+                new_reward_average = finish_length[-1] / epoch
+            new_rewards_average = [new_reward_average for reward in new_rewards_average]
 
             # # new_rewards方式三
             # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
             #                range(len(new_rewards_average))]
-            # new_rewards方式五.一 最近平均任务数
-            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # new_rewards方式五 最近平均任务数
+            # new_rewards方式5.1
+            new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # new_rewards方式5.2
+            # new_rewards = [((new_rewards_average[i] ** 2) * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
 
-            # 方式五.二 当前完成任务数
-            new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
-            new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in
-                           range(len(new_rewards_average))]
-            # new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
+            # # 方式六 当前完成任务数
+            # new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
+            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in
+            #                range(len(new_rewards_average))]
+            # # new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
 
             """经验池 添加内容 record memory"""
             new_done_buffer_list, new_pos_list = self.env.get_center_state()
@@ -584,11 +589,12 @@ class MAACAgent(object):
             # 多目标
             new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
                                                                                              new_bandvec)
-            # if epoch == 0:
-            #     new_reward_average = 0
-            # else:
-            #     new_reward_average = finish_length[-1] / epoch  # 前16个都是平均值作为reward
-            # new_rewards_average = [new_reward_average for reward in new_rewards_average]
+            # 最近平均任务数
+            if epoch == 0:
+                new_reward_average = 0
+            else:
+                new_reward_average = finish_length[-1] / epoch  # 前16个都是平均值作为reward
+            new_rewards_average = [new_reward_average for reward in new_rewards_average]
 
             """
             # 方式一
@@ -608,17 +614,20 @@ class MAACAgent(object):
             # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - reward_age) * weight_age)for i in range(len(new_rewards_average))]
 
             """
-            # # new_rewards方式五
-            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # # new_rewards方式五最近平均任务数
+            # new_rewards方式5.1
+            new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # # new_rewards方式5.2
+            # new_rewards = [((new_rewards_average[i] ** 2) * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
 
-            # 方式五.二 当前完成任务数
-            if len(finish_length) > 1:
-                new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
-            else:
-                new_rewards_average = [0 for reward in new_rewards_average]
-            new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in
-                           range(len(new_rewards_average))]
-            # new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
+            # 方式六 当前完成任务数
+            # if len(finish_length) > 1:
+            #     new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
+            # else:
+            #     new_rewards_average = [0 for reward in new_rewards_average]
+            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in
+            #                range(len(new_rewards_average))]
+            # # new_rewards = [(new_rewards_age[i] * weight_age - new_rewards_average[i] * weight_average) for i in range(len(new_rewards_average))]
 
         # # 单目标
         # return new_rewards[-1]
@@ -878,13 +887,13 @@ class MAACAgent(object):
             step_reward_age.append(cur_reward_age)
             step_reward_average.append(cur_reward_average)
             print('epoch:%s cur_reward:%f' % (epoch, cur_reward))
-            # print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
-            # print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
+            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
+            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
             # 打印控制台日志
             f_print_logs = PRINT_LOGS(cur_time).open()
             print('epoch:%s reward:%f' % (epoch, cur_reward), file=f_print_logs)
-            # print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age), file=f_print_logs)
-            # print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average), file=f_print_logs)
+            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age), file=f_print_logs)
+            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average), file=f_print_logs)
             f_print_logs.close()
 
             """经验重放"""
@@ -922,8 +931,8 @@ class MAACAgent(object):
                 update_target_net(self.center_critic, self.target_center_critic, self.tau)
 
             total_reward += cur_reward
-            # total_reward_age += cur_reward_age
-            # total_reward_average += cur_reward_average
+            total_reward_age += cur_reward_age
+            total_reward_average += cur_reward_average
             steps += 1
             epoch += 1
 
@@ -943,8 +952,8 @@ class MAACAgent(object):
                                           self.summaries['agent%s-critic_loss' % acount], step=epoch)
                 # tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
                 tf.summary.scalar('Main/step_reward', cur_reward, step=epoch)
-                # tf.summary.scalar('Main/step_reward_age', cur_reward_age, step=epoch)
-                # tf.summary.scalar('Main/step_reward_average', cur_reward_average, step=epoch)
+                tf.summary.scalar('Main/step_reward_age', cur_reward_age, step=epoch)
+                tf.summary.scalar('Main/step_reward_average', cur_reward_average, step=epoch)
 
             summary_writer.flush()
 

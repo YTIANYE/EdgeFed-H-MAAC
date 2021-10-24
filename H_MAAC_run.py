@@ -174,7 +174,7 @@ def H_MAAC_run():
     experiment_3()
 
     # 实验4：研究数据平均年龄
-    experiment_4()
+    # experiment_4()
 
     # 下一步计划
     # 测试reward方式四的情况，并且做上下限，

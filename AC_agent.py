@@ -276,6 +276,7 @@ class ACAgent(object):
                 agent_act_list.append([move, execution, offloading])
 
             """reward 和 经过预测后得到的结果"""
+            """
             # 单一目标
             new_state_map, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
             # # TODO reward 修改
@@ -301,7 +302,7 @@ class ACAgent(object):
             # new_rewards方式三        [不同weight_age下的new_rewards比较，由于1 * weight_age 的不同，不能直接用来比较]
             new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
                            range(len(new_rewards_average))]
-            """
+
 
             """经验池 添加内容 record memory"""
             new_sensor_map, agent_map = self.env.get_statemap()
@@ -330,6 +331,7 @@ class ACAgent(object):
             new_bandvec = np.random.rand(self.agent_num)
             new_bandvec = new_bandvec / np.sum(new_bandvec)
             "reward"
+            """
             # 单目标
             new_state_maps, new_rewards, done, info = self.env.step(agent_act_list, new_bandvec)
             # TODO reward 修改
@@ -355,14 +357,11 @@ class ACAgent(object):
             # new_rewards方式三
             new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
                            range(len(new_rewards_average))]
-            """
-
-        # 单目标
-        return new_rewards[-1]
-
-        # # 多目标
-        # # 返回总reward、平均年龄、平均任务数
-        # return new_rewards[-1], new_rewards_age[-1], new_rewards_average[-1]  # new_rewards[-1]四个reward的值都是一样的，所以返回其中之一即可
+        # # 单目标
+        # return new_rewards[-1]
+        # 多目标
+        # 返回总reward、平均年龄、平均任务数
+        return new_rewards[-1], new_rewards_age[-1], new_rewards_average[-1]  # new_rewards[-1]四个reward的值都是一样的，所以返回其中之一即可
 
     # @tf.function(experimental_relax_shapes=True)
     def replay(self):

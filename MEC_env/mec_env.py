@@ -112,13 +112,13 @@ class MEC_MARL_ENV(gym.Env):
             obs.append(self.get_obs(agent))  # 观察范围
             done.append(self._get_done(agent))  # 完成反馈
             # TODO reward修改
-            # 年龄的reward
-            reward.append(self._get_age())  # 每个agent reward相同，都是平均年龄
+            # # 年龄的reward
+            # reward.append(self._get_age())  # 每个agent reward相同，都是平均年龄
             # # 平均任务的reward
             # reward.append(self._get_reward())
-            # # # 联合的reward
-            # reward_age.append(self._get_age())
-            # reward_average.append(self._get_reward())
+            # # 联合的reward
+            reward_age.append(self._get_age())
+            reward_average.append(self._get_reward())
             info['n'].append(self._get_info(agent))
         self.state = obs
 
