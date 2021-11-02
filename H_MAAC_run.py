@@ -1,3 +1,5 @@
+from typing import Dict
+
 import gym
 import numpy as np
 import random
@@ -26,7 +28,10 @@ FL = True  # 控制是否联合学习的开关，默认True
 # 传入数据源缓冲区上限
 # def run(sensor_data_buffer_max):
 # 传入数据源个数
-def run(sensor_num):
+# def run(sensor_num):
+def run(conditions):
+    sensor_num = conditions["sensor_num"]
+    sample_method = conditions["sample_method"]
     np.random.seed(map_seed)
     random.seed(map_seed)
     tf.random.set_seed(rand_seed)
@@ -48,7 +53,7 @@ def run(sensor_num):
     # env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta)
     env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta, aggregate_reward=aggregate_reward)
     # 建立模型
-    MAAC = MAAC_agent.MAACAgent(env, TAU, GAMMA, LR_A, LR_C, LR_A, LR_C, BATCH_SIZE, Epsilon)
+    MAAC = MAAC_agent.MAACAgent(env, TAU, GAMMA, LR_A, LR_C, LR_A, LR_C, BATCH_SIZE, Epsilon, sample_method)
 
     """训练开始"""
     # 记录环境参数
@@ -85,79 +90,95 @@ def run(sensor_num):
     f_print_logs.close()
 
 
-# 实验1：研究数据源个数对reward趋势的影响
-def experiment_1():
+# # 实验1：研究数据源个数对reward趋势的影响
+# def experiment_1():
+#     """
+#     研究总平均任务数
+#     sample方式二
+#     变量：数据源个数
+#     """
+#     # 可能是添加上限的实验或只是sample方式二
+#     # sensor_nums = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+#
+#     # sample方式二
+#     # sensor_nums = [50, 60, 70, 130, 30, 20, 40, 80, 90, 100, 110, 120]  # 140
+#     # sensor_nums = [60, 60, 60, 60, 50, 50, 50, 50]
+#     # sensor_nums = [60, 60, 60, 60, 60]
+#
+#     """
+#     研究最近平均任务数
+#     sample方式二
+#     变量：数据源个数
+#     """
+#     # FL = True
+#     sensor_nums = [60, 60, 60, 60, 60, 60, 60, 60, 60, 60]  # 最近200 epoch_num = 200
+#     for i in range(len(sensor_nums)):
+#         print("sensor_num:", sensor_nums[i])
+#         run(sensor_nums[i])
+#
+#
+# # 实验2：研究上下限对reward趋势的影响
+# def experiment_2():
+#     """
+#     数据源缓冲区上限、数据源缓冲区下限、收集上限、收集下限
+#     """
+#     """
+#     定量：数据源缓冲区上限 data_buffer_max = 10
+#     变量：数据源个数 100 60 50 70 80 90 110 40 30
+#     """
+#     # run(60)  # 100
+#     """
+#     定量：数据源个数 50
+#     变量：数据源缓冲区上限 data_buffer_max = 10 20 40 100 200
+#     """
+#     sensor_data_buffer_maxs = [20, 40, 100, 200]
+#     for sensor_data_buffer_max in sensor_data_buffer_maxs:
+#         # 记录控制台日志
+#         f_print_logs = PRINT_LOGS(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')).open()
+#         print("sensor_data_buffer_max:", sensor_data_buffer_max)
+#         print("sensor_data_buffer_max:", sensor_data_buffer_max, f_print_logs)
+#         # 关闭记录控制台日志
+#         f_print_logs.close()
+#
+#         run(sensor_data_buffer_max)
+#
+#
+# # 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
+# def experiment_3():
+#     """
+#     变量：数据源个数
+#     """
+#     sensor_nums = [60, 60, 60, 60, 60]
+#     for i in range(len(sensor_nums)):
+#         print("sensor_num:", sensor_nums[i])
+#         run(sensor_nums[i])
+#
+#
+# # 实验4：研究数据平均年龄
+# def experiment_4():
+#     """
+#     变量：数据源个数
+#     """
+#     sensor_nums = [60, 60, 60]
+#     for i in range(len(sensor_nums)):
+#         print("sensor_num:", sensor_nums[i])
+#         run(sensor_nums[i])
+
+# 实验5：对比不同sample方式
+def experiment_5():
     """
-    研究总平均任务数
-    sample方式二
     变量：数据源个数
     """
-    # 可能是添加上限的实验或只是sample方式二
-    # sensor_nums = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
-
-    # sample方式二
-    # sensor_nums = [50, 60, 70, 130, 30, 20, 40, 80, 90, 100, 110, 120]  # 140
-    # sensor_nums = [60, 60, 60, 60, 50, 50, 50, 50]
     # sensor_nums = [60, 60, 60, 60, 60]
+    sensor_nums = [60]
+    sample_methods = [1, 2]  # 默认方式二 # 采样方式一 1；    采样方式二 2
+    for sample in sample_methods:
+        for i in range(len(sensor_nums)):
+            d = 0
+            conditions = {'sensor_num': sensor_nums[i], 'sample_method': sample}
+            print("sensor_num:", sensor_nums[i])
+            run(conditions)
 
-    """
-    研究最近平均任务数
-    sample方式二
-    变量：数据源个数
-    """
-    # FL = True
-    sensor_nums = [60, 60, 60, 60, 60, 60, 60, 60, 60, 60]  # 最近200 epoch_num = 200
-    for i in range(len(sensor_nums)):
-        print("sensor_num:", sensor_nums[i])
-        run(sensor_nums[i])
-
-
-# 实验2：研究上下限对reward趋势的影响
-def experiment_2():
-    """
-    数据源缓冲区上限、数据源缓冲区下限、收集上限、收集下限
-    """
-    """
-    定量：数据源缓冲区上限 data_buffer_max = 10
-    变量：数据源个数 100 60 50 70 80 90 110 40 30 
-    """
-    # run(60)  # 100
-    """
-    定量：数据源个数 50
-    变量：数据源缓冲区上限 data_buffer_max = 10 20 40 100 200
-    """
-    sensor_data_buffer_maxs = [20, 40, 100, 200]
-    for sensor_data_buffer_max in sensor_data_buffer_maxs:
-        # 记录控制台日志
-        f_print_logs = PRINT_LOGS(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')).open()
-        print("sensor_data_buffer_max:", sensor_data_buffer_max)
-        print("sensor_data_buffer_max:", sensor_data_buffer_max, f_print_logs)
-        # 关闭记录控制台日志
-        f_print_logs.close()
-
-        run(sensor_data_buffer_max)
-
-
-# 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
-def experiment_3():
-    """
-    变量：数据源个数
-    """
-    sensor_nums = [60, 60, 60, 60, 60]
-    for i in range(len(sensor_nums)):
-        print("sensor_num:", sensor_nums[i])
-        run(sensor_nums[i])
-
-
-# 实验4：研究数据平均年龄
-def experiment_4():
-    """
-    变量：数据源个数
-    """
-    sensor_nums = [60, 60, 60]
-    for i in range(len(sensor_nums)):
-        print("sensor_num:", sensor_nums[i])
-        run(sensor_nums[i])
 
 
 def H_MAAC_run():
@@ -171,14 +192,12 @@ def H_MAAC_run():
     # experiment_2()
 
     # 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
-    experiment_3()
+    # experiment_3()
 
     # 实验4：研究数据平均年龄
     # experiment_4()
 
-    # 下一步计划
-    # 测试reward方式四的情况，并且做上下限，
-    # reward的有没有明显提高，根据设限之后的reward增长趋势，应该会提高并且平稳
+    experiment_5()
 
     """测试运行"""
     # run(60)

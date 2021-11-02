@@ -14,8 +14,8 @@ max_size = 5  # 收集数据和执行数据的最大缓冲区大小
 sensor_lam = 1e3  # 1000 # 泊松分布 lam-发生率或已知次数
 
 # 测试周期：经过大量实验实例观察一般2k个epoch开始趋于稳定，故实验周期设置为3k
-MAX_EPOCH = 3000    # 10000 # 3000
-MAX_EP_STEPS = 200 # 200
+MAX_EPOCH = 100 # 3000    # 10000 # 3000
+MAX_EP_STEPS = 20 # 200
 # 大周期
 # MAX_EPOCH = 5000
 # MAX_EP_STEPS = 200
@@ -29,7 +29,7 @@ LR_A = 0.001  # learning rate for actor
 LR_C = 0.002  # learning rate for critic
 GAMMA = 0.85  # reward discount
 TAU = 0.8  # soft replacement  目标更新权重
-BATCH_SIZE = 128
+BATCH_SIZE = 24 # 128
 alpha = 0.9  #
 beta = 0.1  #
 aggregate_reward = False  # edge 是否共用sum_reward， 源码默认False
@@ -46,7 +46,7 @@ epoch_num = 200     # 16 32 64 128  200   # 取最近epoch_num个epoch计算平�
 # weight_age = 0.5
 # weight_average = 1 - weight_age
 weight_age = 1
-weight_average = 5
+weight_average = 5  # 5 10
 
 # random seeds are fixed to reproduce the results
 map_seed = 1
@@ -54,7 +54,7 @@ rand_seed = 17
 # np.random.seed(map_seed)
 # random.seed(map_seed)
 # tf.random.set_seed(rand_seed) # TODO 随机种子的位置有没有问题
-sample_method = 2      # 默认方式二 # 采样方式一 1；    采样方式二 2
+# sample_method = 1      # 默认方式二 # 采样方式一 1；    采样方式二 2
 
 # 记录环境参数
 params = {
@@ -88,6 +88,6 @@ params = {
     'FL_omega': FL_omega,
     'epoch_num': epoch_num,
     'weight_age': weight_age,
-    'weight_average': weight_average,
-    'sample_method': sample_method
+    'weight_average': weight_average
+    # 'sample_method': sample_method
 }

@@ -13,6 +13,7 @@ import imageio
 import glob
 import tqdm
 import json
+import math
 import platform
 from print_logs import *
 from Params import *
@@ -323,7 +324,7 @@ def circle_argmax(move_dist, move_r):
 class MAACAgent(object):
 
     def __init__(self, env, tau, gamma, lr_aa, lr_ac, lr_ca, lr_cc, batch,
-                 epsilon=0.2):  # aa agent actor; ac agent critic; ca center actor; cc center critic
+                 epsilon=0.2, sample_method=1):  # aa agent actor; ac agent critic; ca center actor; cc center critic
         self.env = env
         self.agents = self.env.agents
         self.agent_num = self.env.agent_num
@@ -342,6 +343,7 @@ class MAACAgent(object):
         self.move_count, self.move_dict = discrete_circle_sample_count(self.env.move_r)  # 可移动到的坐标点及其个数
         self.movemap_shape = (self.env.move_r * 2 + 1, self.env.move_r * 2 + 1)  # 移动map的形状
         self.epsilon = epsilon  # Probability of random exploration
+        self.sample_method = sample_method
 
         # learning params
         self.tau = tau  # soft replacement  目标更新权重。
@@ -515,10 +517,13 @@ class MAACAgent(object):
             # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
             #                range(len(new_rewards_average))]
             # new_rewards方式五 最近平均任务数
-            # new_rewards方式5.1
-            new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
-            # new_rewards方式5.2
+            # # new_rewards方式5.1
+            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # # new_rewards方式5.2
             # new_rewards = [((new_rewards_average[i] ** 2) * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # new_rewards方式5.3: log
+            new_rewards = [(math.log(new_rewards_average[i]) * weight_average - math.log(new_rewards_age[i]) * weight_age) for i in
+                           range(len(new_rewards_average))]
 
             # # 方式六 当前完成任务数
             # new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
@@ -615,10 +620,13 @@ class MAACAgent(object):
 
             """
             # # new_rewards方式五最近平均任务数
-            # new_rewards方式5.1
-            new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
-            # # new_rewards方式5.2
+            # # new_rewards方式5.1
+            # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # # new_rewards方式5.2: 平方
             # new_rewards = [((new_rewards_average[i] ** 2) * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
+            # new_rewards方式5.3: log
+            new_rewards = [(math.log(new_rewards_average[i] + 0.000001) * weight_average - math.log(new_rewards_age[i]) * weight_age) for i in
+                           range(len(new_rewards_average))]
 
             # 方式六 当前完成任务数
             # if len(finish_length) > 1:
@@ -645,12 +653,12 @@ class MAACAgent(object):
             if len(agent_memory) < self.batch_size:
                 continue
             """选择采样方式"""
-            if sample_method == 1:
+            if self.sample_method == 1:
                 # 方式一：原sample方式
                 samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
                     agent_memory[-self.batch_size * 2:],
                     int(self.batch_size * (1 - self.sample_prop)))  # random.sample 截取列表的指定长度的随机数,但是不会改变列表本身的排序
-            elif sample_method == 2:
+            elif self.sample_method == 2:
                 # 方式二：改后的sample方式
                 samples = agent_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
                     agent_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
@@ -729,11 +737,11 @@ class MAACAgent(object):
             return
         else:
             """选择不同的采样方式"""
-            if sample_method == 1:
+            if self.sample_method == 1:
                 # 方式一：原sample方式
                 center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
                     self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
-            elif sample_method == 2:
+            elif self.sample_method == 2:
                 # 方式二：改后的sample方式
                 center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
                     self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
