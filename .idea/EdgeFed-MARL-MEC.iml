@@ -20,7 +20,7 @@
       <excludeFolder url="file://$MODULE_DIR$/logs_sample2" />
       <excludeFolder url="file://$MODULE_DIR$/logs_age_and_average" />
     </content>
-    <orderEntry type="jdk" jdkName="Remote Python 3.8.5 (sftp://stu03@172.16.75.2:22/usr/local/anaconda3/bin/python3.8)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (PractisePython)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

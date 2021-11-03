@@ -59,6 +59,7 @@ def run(conditions):
     # 记录环境参数
     m_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
     f = open('logs/hyperparam/%s.json' % m_time, 'w')
+    params["conditions"] = conditions
     json.dump(params, f)
     f.close()
 
@@ -169,12 +170,10 @@ def experiment_5():
     """
     变量：数据源个数
     """
-    # sensor_nums = [60, 60, 60, 60, 60]
-    sensor_nums = [60]
+    sensor_nums = [60, 60, 60, 60, 60]
     sample_methods = [1, 2]  # 默认方式二 # 采样方式一 1；    采样方式二 2
     for sample in sample_methods:
         for i in range(len(sensor_nums)):
-            d = 0
             conditions = {'sensor_num': sensor_nums[i], 'sample_method': sample}
             print("sensor_num:", sensor_nums[i])
             run(conditions)
@@ -197,6 +196,7 @@ def H_MAAC_run():
     # 实验4：研究数据平均年龄
     # experiment_4()
 
+    # 实验5：研究sample方式
     experiment_5()
 
     """测试运行"""

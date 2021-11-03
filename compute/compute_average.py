@@ -8,6 +8,7 @@ path = 'D:\Projects\pythonProject\EdgeFed-MARL-MEC\compute'
 filenames = []
 averages = []
 ages = []
+totals = []
 for file in os.listdir(path):
     if os.path.splitext(file)[1] == '.txt':
         filenames.append(file.split('.')[0])
@@ -20,18 +21,21 @@ for file in os.listdir(path):
                 rewards.append(string[-1].split('\n')[0])
             average = [float(s) for s in rewards[2:9000:3]]
             age = [float(s) for s in rewards[1:9000:3]]
+            total = [float(s) for s in rewards[0:9000:3]]
             averages.append(np.mean(average))
             ages.append(np.mean(age))
+            totals.append(np.mean(total))
 # print(filenames)
 # print(averages)
 
 # 输出到Excel
-rewards = {'filenames': filenames,
+result = {'filenames': filenames,
            'averages': averages,
-           'age': ages}
-print(rewards)
+           'ages': ages,
+           'totals':totals}
+print(result)
 
-df = pd.DataFrame(rewards)
-df.to_excel('rewards.xlsx')
+df = pd.DataFrame(result)
+df.to_excel('result.xlsx')
 
 
