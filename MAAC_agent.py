@@ -521,9 +521,13 @@ class MAACAgent(object):
             # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
             # # new_rewards方式5.2
             # new_rewards = [((new_rewards_average[i] ** 2) * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
-            # new_rewards方式5.3: log
-            new_rewards = [(math.log(new_rewards_average[i]) * weight_average - math.log(new_rewards_age[i]) * weight_age) for i in
-                           range(len(new_rewards_average))]
+            # # new_rewards方式5.3: log
+            # new_rewards = [(math.log(new_rewards_average[i] + 0.000001) * weight_average - math.log(new_rewards_age[i]) * weight_age) for i in
+            #                range(len(new_rewards_average))]     # math.log 底数，默认为 e
+            # new_rewards方式5.4: 平方和
+            new_rewards = [(((new_rewards_average[i] * weight_average) ** 2 - (new_rewards_age[i] * weight_age) ** 2) /
+                           (new_rewards_average[i] * weight_average + new_rewards_age[i] * weight_age) ** 2)
+                           for i in range(len(new_rewards_average))]     # math.log 底数，默认为 e
 
             # # 方式六 当前完成任务数
             # new_rewards_average = [(finish_length[-1] - finish_length[-2]) for reward in new_rewards_average]
@@ -624,9 +628,13 @@ class MAACAgent(object):
             # new_rewards = [(new_rewards_average[i] * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
             # # new_rewards方式5.2: 平方
             # new_rewards = [((new_rewards_average[i] ** 2) * weight_average - new_rewards_age[i] * weight_age) for i in range(len(new_rewards_average))]
-            # new_rewards方式5.3: log
-            new_rewards = [(math.log(new_rewards_average[i] + 0.000001) * weight_average - math.log(new_rewards_age[i]) * weight_age) for i in
-                           range(len(new_rewards_average))]     # math.log 底数，默认为 e
+            # # new_rewards方式5.3: log
+            # new_rewards = [(math.log(new_rewards_average[i] + 0.000001) * weight_average - math.log(new_rewards_age[i]) * weight_age) for i in
+            #                range(len(new_rewards_average))]     # math.log 底数，默认为 e
+            # new_rewards方式5.4: 平方和
+            new_rewards = [(((new_rewards_average[i] * weight_average) ** 2 - (new_rewards_age[i] * weight_age) ** 2) /
+                           (new_rewards_average[i] * weight_average + new_rewards_age[i] * weight_age) ** 2)
+                           for i in range(len(new_rewards_average))]     # math.log 底数，默认为 e
 
             # 方式六 当前完成任务数
             # if len(finish_length) > 1:

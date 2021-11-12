@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 import openpyxl
@@ -9,6 +8,11 @@ filenames = []
 averages = []
 ages = []
 totals = []
+
+min_averages = []
+max_averages = []
+min_ages = []
+max_ages = []
 for file in os.listdir(path):
     if os.path.splitext(file)[1] == '.txt':
         filenames.append(file.split('.')[0])
@@ -22,6 +26,10 @@ for file in os.listdir(path):
             average = [float(s) for s in rewards[2:9000:3]]
             age = [float(s) for s in rewards[1:9000:3]]
             total = [float(s) for s in rewards[0:9000:3]]
+            min_averages.append(min(average))
+            max_averages.append(max(average))
+            min_ages.append(min(age))
+            max_ages.append(max(age))
             averages.append(np.mean(average))
             ages.append(np.mean(age))
             totals.append(np.mean(total))
@@ -30,12 +38,14 @@ for file in os.listdir(path):
 
 # 输出到Excel
 result = {'filenames': filenames,
-           'averages': averages,
-           'ages': ages,
-           'totals':totals}
+          'averages': averages,
+          'ages': ages,
+          'totals': totals,
+          'min_averages': min_averages,
+          'max_averages': max_averages,
+          'min_ages': min_ages,
+          'max_ages': max_ages}
 print(result)
 
 df = pd.DataFrame(result)
 df.to_excel('result.xlsx')
-
-
