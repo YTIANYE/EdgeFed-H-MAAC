@@ -18,7 +18,6 @@ from matplotlib import pyplot as plt
 import json
 import time
 
-
 FL = True  # 控制是否联合学习的开关，默认True
 
 
@@ -170,14 +169,18 @@ def experiment_5():
     """
     变量：数据源个数
     """
-    sensor_nums = [60, 60, 60, 60, 60]
+    # sensor_nums = [60, 60, 60, 60, 60]
+    # sensor_nums = [40, 40, 80, 80]
+    sensor_nums = [40, 40, 40, 40, 40,
+                   50, 50, 50, 50, 50,
+                   70, 70, 70, 70, 70,
+                   80, 80, 80, 80, 80]
     sample_methods = [1, 2]  # 默认方式二 # 采样方式一 1；    采样方式二 2
     for sample in sample_methods:
         for i in range(len(sensor_nums)):
             conditions = {'sensor_num': sensor_nums[i], 'sample_method': sample}
             print("sensor_num:", sensor_nums[i])
             run(conditions)
-
 
 
 def H_MAAC_run():
