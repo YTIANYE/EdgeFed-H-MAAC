@@ -5,7 +5,7 @@ from MAAC_run import MAAC_run
 
 if __name__ == "__main__":
 
-    H_MAAC_run()
-    # MAAC_run()
+    # H_MAAC_run()
+    MAAC_run()
     # AC_run()
 

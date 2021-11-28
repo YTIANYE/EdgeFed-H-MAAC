@@ -38,7 +38,6 @@ Epsilon = 0.2  # Probability of random exploration      # Epsilon = 0.1  # Epsil
 up_freq = 8  # 目标网络更新频率 每up_freq个epoch更新一次
 render_freq = 32
 FL = True  # 控制是否联合学习的开关，默认True
-# FL = False
 FL_omega = 0.5  # todo 关于联合学习因子其他情况还没有进行实验
 
 epoch_num = 200  # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均值, epoch_num 的取值要大于16，否则需要改正else中的reward代码
@@ -46,7 +45,7 @@ epoch_num = 200  # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均�
 # weight_age = 0.5
 # weight_average = 1 - weight_age
 weight_age = 1  # 1 0
-weight_average = 5  # 0 1 2 3 4 5 8 10
+weight_average = 10  # 0 1 2 3 4 5 8 10
 
 # random seeds are fixed to reproduce the results
 map_seed = 1
