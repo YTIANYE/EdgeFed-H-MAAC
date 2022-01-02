@@ -16,7 +16,10 @@ from print_logs import *
 
 
 # 传入数据源个数
-def run(sensor_num):
+# def run(sensor_num):
+def run(conditions):
+    sensor_num = conditions["sensor_num"]
+    sample_method = conditions["sample_method"]
     np.random.seed(map_seed)
     random.seed(map_seed)
     tf.random.set_seed(rand_seed)
@@ -31,7 +34,7 @@ def run(sensor_num):
     """初始化"""
     mec_world = mec_def.MEC_world(map_size, agent_num, sensor_num, obs_r, speed, collect_r, max_size, sensor_lam)
     env = mec_env.MEC_MARL_ENV(mec_world, alpha=alpha, beta=beta)
-    AC = AC_agent.ACAgent(env, TAU, GAMMA, LR_A, LR_C, LR_A, LR_C, BATCH_SIZE, Epsilon)
+    AC = AC_agent.ACAgent(env, TAU, GAMMA, LR_A, LR_C, LR_A, LR_C, BATCH_SIZE, Epsilon, sample_method)
 
     """训练开始"""
     # 记录环境参数
@@ -67,51 +70,68 @@ def run(sensor_num):
     f_print_logs.close()
 
 
-# 实验1：研究数据源个数对reward趋势的影响
-def experiment_1():
-    """
-    sample方式一
-    变量：数据源个数
-    """
-    # sensor_nums = [60, 50, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
-    # sensor_nums = [50, 50, 50, 50, 60, 60, 60, 60]
-    # sensor_nums = [50, 50, 50, 50, 50, 60, 60, 60, 60, 60]
-    # for i in range(len(sensor_nums)):
-    #     print("sensor_num:", sensor_num)
-    #     run(sensor_nums[i])
+# # 实验1：研究数据源个数对reward趋势的影响
+# def experiment_1():
+#     """
+#     sample方式一
+#     变量：数据源个数
+#     """
+#     # sensor_nums = [60, 50, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
+#     # sensor_nums = [50, 50, 50, 50, 60, 60, 60, 60]
+#     # sensor_nums = [50, 50, 50, 50, 50, 60, 60, 60, 60, 60]
+#     # for i in range(len(sensor_nums)):
+#     #     print("sensor_num:", sensor_num)
+#     #     run(sensor_nums[i])
+#
+#     """
+#     研究最近平均任务数
+#     sample方式二
+#     变量：数据源个数
+#     """
+#     # sensor_nums = [60, 60, 60, 60, 60]  # 最近200 epoch_num = 200
+#     sensor_nums = [60, 60, 60, 60]  # 最近200 epoch_num = 200
+#     for i in range(len(sensor_nums)):
+#         print("sensor_num:", sensor_num)
+#         run(sensor_nums[i])
+#
+#
+# # 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
+# def experiment_3():
+#     """
+#     变量：数据源个数
+#     """
+#     sensor_nums = [60, 60, 60, 60, 60]
+#     for i in range(len(sensor_nums)):
+#         print("sensor_num:", sensor_nums[i])
+#         run(sensor_nums[i])
+#
+#
+# # 实验4：研究数据平均年龄
+# def experiment_4():
+#     """
+#     变量：数据源个数
+#     """
+#     sensor_nums = [60, 60, 60, 60, 60]
+#     for i in range(len(sensor_nums)):
+#         print("sensor_num:", sensor_nums[i])
+#         run(sensor_nums[i])
 
-    """
-    研究最近平均任务数
-    sample方式二
-    变量：数据源个数
-    """
-    # sensor_nums = [60, 60, 60, 60, 60]  # 最近200 epoch_num = 200
-    sensor_nums = [60, 60, 60, 60]  # 最近200 epoch_num = 200
-    for i in range(len(sensor_nums)):
-        print("sensor_num:", sensor_num)
-        run(sensor_nums[i])
-
-
-# 实验3：研究联合优化：最近平均任务数 和 数据平均年龄
-def experiment_3():
+def experiment_5():
     """
     变量：数据源个数
     """
     sensor_nums = [60, 60, 60, 60, 60]
-    for i in range(len(sensor_nums)):
-        print("sensor_num:", sensor_nums[i])
-        run(sensor_nums[i])
 
-
-# 实验4：研究数据平均年龄
-def experiment_4():
-    """
-    变量：数据源个数
-    """
-    sensor_nums = [60, 60, 60, 60, 60]
-    for i in range(len(sensor_nums)):
-        print("sensor_num:", sensor_nums[i])
-        run(sensor_nums[i])
+    # sensor_nums = [40, 40, 40, 40, 40,
+    #                50, 50, 50, 50, 50,
+    #                70, 70, 70, 70, 70,
+    #                80, 80, 80, 80, 80]
+    sample_methods = [1, 2]  # 默认方式二 # 采样方式一 1；    采样方式二 2
+    for sample in sample_methods:
+        for i in range(len(sensor_nums)):
+            conditions = {'sensor_num': sensor_nums[i], 'sample_method': sample}
+            print("sensor_num:", sensor_nums[i])
+            run(conditions)
 
 
 def AC_run():
@@ -125,8 +145,8 @@ def AC_run():
     # experiment_3()
 
     # 实验4：研究数据平均年龄
-    experiment_4()
-
+    # experiment_4()
+    experiment_5()
     """测试运行"""
     # run(60)
     # run(60)

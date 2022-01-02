@@ -506,12 +506,15 @@ class MAACAgent(object):
             # 多目标
             new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
                                                                                              new_bandvec[0])
+            # # #任务数方式一 ：最近epoch_num个epoch平均每个epoch完成的任务数
+            # if epoch > epoch_num:  # 最近epoch_num个epoch平均每个epoch完成的任务数
+            #     new_reward_average = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
+            # else:
+            #     new_reward_average = finish_length[-1] / epoch
+            # new_rewards_average = [new_reward_average for reward in new_rewards_average]
 
-            if epoch > epoch_num:  # 最近epoch_num个epoch平均每个epoch完成的任务数
-                new_reward_average = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
-            else:
-                new_reward_average = finish_length[-1] / epoch
-            new_rewards_average = [new_reward_average for reward in new_rewards_average]
+            # 任务数方式二：平均任务数=总平均的任务数除以总的时间
+            new_rewards_average = [reward / (epoch + 1) for reward in new_rewards_average]
 
             # # new_rewards方式三
             # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
@@ -598,12 +601,16 @@ class MAACAgent(object):
             # 多目标
             new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
                                                                                              new_bandvec)
-            # 最近平均任务数
-            if epoch == 0:
-                new_reward_average = 0
-            else:
-                new_reward_average = finish_length[-1] / epoch  # 前16个都是平均值作为reward
-            new_rewards_average = [new_reward_average for reward in new_rewards_average]
+            # # # #任务数方式一 ：最近epoch_num个epoch平均每个epoch完成的任务数
+            # # 最近平均任务数
+            # if epoch == 0:
+            #     new_reward_average = 0
+            # else:
+            #     new_reward_average = finish_length[-1] / epoch  # 前16个都是平均值作为reward
+            # new_rewards_average = [new_reward_average for reward in new_rewards_average]
+
+            # 任务数方式二：平均任务数=总平均的任务数除以总的时间
+            new_rewards_average = [reward / (epoch + 1) for reward in new_rewards_average]
 
             """
             # 方式一

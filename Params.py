@@ -45,7 +45,7 @@ epoch_num = 200  # 16 32 64 128  200   # 取最近epoch_num个epoch计算平均�
 # weight_age = 0.5
 # weight_average = 1 - weight_age
 weight_age = 1  # 1 0
-weight_average = 10  # 0 1 2 3 4 5 8 10
+weight_average = 5  # 0 1 2 3 4 5 8 10
 
 # random seeds are fixed to reproduce the results
 map_seed = 1

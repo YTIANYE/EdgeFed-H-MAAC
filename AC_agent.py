@@ -12,6 +12,7 @@ import imageio
 import glob
 import tqdm
 import json
+import math
 import platform
 
 from Params import *
@@ -20,6 +21,19 @@ from print_logs import *
 np.random.seed(map_seed)
 random.seed(map_seed)
 tf.random.set_seed(rand_seed)
+
+"""返回 可移动范围内的全部坐标点[y, x] 及个数 """
+
+
+def discrete_circle_sample_count(n):
+    count = 0
+    move_dict = {}
+    for x in range(-n, n + 1):
+        y_l = int(np.floor(np.sqrt(n ** 2 - x ** 2)))
+        for y in range(-y_l, y_l + 1):
+            move_dict[count] = np.array([y, x])
+            count += 1
+    return (count), move_dict
 
 
 def get_center_state(env):
@@ -39,15 +53,7 @@ def get_center_state(env):
     return total_buffer_list, done_buffer_list, pos_list
 
 
-def discrete_circle_sample_count(n):
-    count = 0
-    move_dict = {}
-    for x in range(-n, n + 1):
-        y_l = int(np.floor(np.sqrt(n ** 2 - x ** 2)))
-        for y in range(-y_l, y_l + 1):
-            move_dict[count] = np.array([y, x])
-            count += 1
-    return (count), move_dict
+"""构建 center_actor_net"""
 
 
 def center_actor(input_dim_list, cnn_kernel_size, move_r, kernel_num):
@@ -151,6 +157,9 @@ def center_critic(input_dim_list, cnn_kernel_size):
     return model
 
 
+"""更新 target_net 的权重 weights """
+
+
 def update_target_net(model, target, tau=0.8):
     weights = model.get_weights()
     target_weights = target.get_weights()
@@ -168,7 +177,7 @@ def circle_argmax(move_dist, move_r):
 
 
 class ACAgent(object):
-    def __init__(self, env, tau, gamma, lr_aa, lr_ac, lr_ca, lr_cc, batch, epsilon=0.2):
+    def __init__(self, env, tau, gamma, lr_aa, lr_ac, lr_ca, lr_cc, batch, epsilon=0.2, sample_method=1):
         self.env = env
         self.agents = self.env.agents
         self.agent_num = self.env.agent_num
@@ -185,6 +194,7 @@ class ACAgent(object):
         self.move_count, self.move_dict = discrete_circle_sample_count(self.env.move_r)
         self.movemap_shape = (self.agent_num, self.env.move_r * 2 + 1, self.env.move_r * 2 + 1)
         self.epsilon = epsilon
+        self.sample_method = sample_method
 
         # learning params
         self.tau = tau
@@ -293,16 +303,19 @@ class ACAgent(object):
             """
             # 多目标
             new_state_map, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list, new_bandvec)
-            # 方式四：最近epoch_num个epoch的平均完成任务数     对方式三的reward进行覆盖
+
             if epoch > epoch_num:  # 最近64个epoch平均每个epoch完成的任务数
                 new_reward_average = (finish_length[-1] - finish_length[-1 * epoch_num - 1]) / epoch_num
             else:
                 new_reward_average = finish_length[-1] / epoch
             new_rewards_average = [new_reward_average for reward in new_rewards_average]
-            # new_rewards方式三        [不同weight_age下的new_rewards比较，由于1 * weight_age 的不同，不能直接用来比较]
-            new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
-                           range(len(new_rewards_average))]
-
+            # # new_rewards方式三        [不同weight_age下的new_rewards比较，由于1 * weight_age 的不同，不能直接用来比较]
+            # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
+            #                range(len(new_rewards_average))]
+            # new_rewards方式5.3: log
+            new_rewards = [(math.log(new_rewards_average[i] + 0.000001) * weight_average - math.log(
+                new_rewards_age[i]) * weight_age) for i in
+                           range(len(new_rewards_average))]  # math.log 底数，默认为 e
 
             """经验池 添加内容 record memory"""
             new_sensor_map, agent_map = self.env.get_statemap()
@@ -312,7 +325,7 @@ class ACAgent(object):
             new_pos_list = tf.expand_dims(new_pos_list, axis=0)
 
             # record memory
-            self.center_memory.append(      # 经验池里放的reward可不可以分着放
+            self.center_memory.append(  # 经验池里放的reward可不可以分着放
                 [[sensor_map, total_buffer_list, done_buffer_list, pos_list], action, new_rewards[-1],
                  [new_sensor_map, new_total_buffer_list, new_done_buffer_list, new_pos_list]])
 
@@ -349,19 +362,25 @@ class ACAgent(object):
             # 多目标
             new_state_maps, new_rewards_age, new_rewards_average, done, info = self.env.step(agent_act_list,
                                                                                              new_bandvec)
+            # 最近平均任务数
             if epoch == 0:
                 new_reward_average = 0
             else:
                 new_reward_average = finish_length[-1] / epoch  # 前16个都是平均值作为reward
             new_rewards_average = [new_reward_average for reward in new_rewards_average]
-            # new_rewards方式三
-            new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
-                           range(len(new_rewards_average))]
+            # # new_rewards方式三
+            # new_rewards = [(new_rewards_average[i] / self.agent_num * weight_average + (1 - new_rewards_age[i] / MAX_EPOCH) * weight_age) for i in
+            #                range(len(new_rewards_average))]
+            # new_rewards方式5.3: log
+            new_rewards = [(math.log(new_rewards_average[i] + 0.000001) * weight_average - math.log(
+                new_rewards_age[i]) * weight_age) for i in
+                           range(len(new_rewards_average))]  # math.log 底数，默认为 e
         # # 单目标
         # return new_rewards[-1]
         # 多目标
         # 返回总reward、平均年龄、平均任务数
-        return new_rewards[-1], new_rewards_age[-1], new_rewards_average[-1]  # new_rewards[-1]四个reward的值都是一样的，所以返回其中之一即可
+        return new_rewards[-1], new_rewards_age[-1], new_rewards_average[
+            -1]  # new_rewards[-1]四个reward的值都是一样的，所以返回其中之一即可
 
     # @tf.function(experimental_relax_shapes=True)
     def replay(self):
@@ -369,11 +388,11 @@ class ACAgent(object):
         if len(self.center_memory) < self.batch_size:
             return
         """选择不同的采样方式"""
-        if sample_method == 1:
+        if self.sample_method == 1:
             # 方式一：原sample方式
             center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
                 self.center_memory[-self.batch_size * 2:], int(self.batch_size * (1 - self.sample_prop)))
-        elif sample_method == 2:
+        elif self.sample_method == 2:
             # 方式二：改后的sample方式
             center_samples = self.center_memory[-int(self.batch_size * self.sample_prop):] + random.sample(
                 self.center_memory[-self.batch_size * 2:-int(self.batch_size * self.sample_prop)],
@@ -456,6 +475,7 @@ class ACAgent(object):
 
         # summary_record = []
 
+        """训练过程"""
         while epoch < max_epochs:
             print('epoch%s' % epoch)
 
@@ -491,7 +511,8 @@ class ACAgent(object):
             # cur_reward = self.actor_act(epoch)  # 获取当前reward
             # reward 方式四需要传入 finish_length
 
-            cur_reward, cur_reward_age, cur_reward_average = self.actor_act(epoch, finish_length)  # 获取当前总reward、平均年龄、平均任务数
+            cur_reward, cur_reward_age, cur_reward_average = self.actor_act(epoch,
+                                                                            finish_length)  # 获取当前总reward、平均年龄、平均任务数
             # cur_reward = self.actor_act(epoch, finish_length)  # 获取当前reward
             # cur_reward = self.actor_act(epoch)
 
@@ -499,15 +520,14 @@ class ACAgent(object):
             step_reward.append(cur_reward)
             step_reward_age.append(cur_reward_age)
             step_reward_average.append(cur_reward_average)
-
             print('epoch:%s reward:%f' % (epoch, cur_reward))
-            # print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
-            # print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
+            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age))
+            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average))
             # 打印控制台日志
             f_print_logs = PRINT_LOGS(cur_time).open()
             print('epoch:%s reward:%f' % (epoch, cur_reward), file=f_print_logs)
-            # print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age), file=f_print_logs)
-            # print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average), file=f_print_logs)
+            print('epoch:%s cur_rewards_age:%f' % (epoch, cur_reward_age), file=f_print_logs)
+            print('epoch:%s cur_rewards_average:%f' % (epoch, cur_reward_average), file=f_print_logs)
             f_print_logs.close()
 
             """经验重放"""
@@ -525,8 +545,8 @@ class ACAgent(object):
                 update_target_net(self.center_critic, self.target_center_critic, self.tau)
 
             total_reward += cur_reward
-            # total_reward_age += cur_reward_age
-            # total_reward_average += cur_reward_average
+            total_reward_age += cur_reward_age
+            total_reward_average += cur_reward_average
             steps += 1
             epoch += 1
 
@@ -538,8 +558,8 @@ class ACAgent(object):
                     tf.summary.scalar('Stats/cq_val', self.summaries['cq_val'], step=epoch)
                 # tf.summary.scalar('Main/step_average_age', cur_reward, step=epoch)
                 tf.summary.scalar('Main/step_reward', cur_reward, step=epoch)
-                # tf.summary.scalar('Main/step_reward_age', cur_reward_age, step=epoch)
-                # tf.summary.scalar('Main/step_reward_average', cur_reward_average, step=epoch)
+                tf.summary.scalar('Main/step_reward_age', cur_reward_age, step=epoch)
+                tf.summary.scalar('Main/step_reward_average', cur_reward_average, step=epoch)
 
             summary_writer.flush()
 
